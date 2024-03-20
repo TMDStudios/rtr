@@ -2,14 +2,108 @@ const gameData = {
     "startTime": 0,
     "time": 0,
     "lastBullet": 0,
-    "container": document.getElementById('playArea').getBoundingClientRect()
+    "gameOver": false,
+    "muzzleFlash": false
 }
 
-const player = {
-    x: gameData["container"].left+300,
-    y: gameData["container"].top+500,
-    speedX: 0,
-    speedY: 0
+const canvas = document.querySelector('canvas');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+let ctx = canvas.getContext('2d');
+
+class Player {
+    constructor(){
+        this.position = {
+            x: 110,
+            y: 110
+        }
+        this.velocity = {
+            x: 0,
+            y: 0
+        }
+
+        this.width = 26;
+        this.height = 49;
+
+        this.imgX = 144;
+        this.imgY = 77;
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+
+        this.muzzleX = 246;
+        this.muzzleY = 0;
+        this.muzzleW = 10;
+        this.muzzleH = 12;
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+        if(gameData["muzzleFlash"]){
+            ctx.drawImage(this.image, this.muzzleX, this.muzzleY, this.muzzleW, this.muzzleH, this.position.x+8, this.position.y-8, this.muzzleW, this.muzzleH);
+        }
+    }
+
+    move(){
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+    }
+}
+
+class Bullet {
+    constructor(x,y){
+        this.position = {
+            x: x,
+            y: y
+        }
+
+        this.width = 4;
+        this.height = 10;
+
+        this.imgX = 251;
+        this.imgY = 119;
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+    }
+
+    move(){
+        this.position.y -= 4;
+        if(this.position.y<0){
+            bullets.shift();
+        }
+    }
+}
+
+class Enemy {
+    constructor(){
+        this.position = {
+            x: Math.floor(Math.random() * canvas.width-25),
+            y: 0
+        }
+
+        this.width = 25;
+        this.height = 38;
+
+        this.imgX = 106;
+        this.imgY = 32;
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+    }
+
+    move(){
+        this.position.y++;
+        if(this.position.y>canvas.height){
+            this.position.x = Math.floor(Math.random() * canvas.width-25);
+            this.position.y=0;
+        }
+    }
 }
 
 const keys = {
@@ -20,88 +114,65 @@ const keys = {
     "space": false
 }
 
-const enemies = [{x:50, y:150},{x:100, y:150},{x:150, y:150}];
+const enemies = [new Enemy(),new Enemy(),new Enemy()];
 
 const bullets = [];
 
-const displayPlayer = _ => {
-    document.getElementById('player').style['left'] = player.x + "px";
-    document.getElementById('player').style['top'] = player.y + "px";
-}
-
-const movePlayer = _ => {
-    player.x += player.speedX;
-    player.y += player.speedY;
-}
-
 const handleKeys = _ => {
     if(keys["up"]){
-        player.speedY=-2;
+        player.velocity.y=-2;
     }else if(keys["down"]){
-        player.speedY=2;
+        player.velocity.y=2;
     }else{
-        player.speedY=0;
+        player.velocity.y=0;
     }
     if(keys["left"]){
-        player.speedX=-2;
+        player.velocity.x=-2;
     }else if(keys["right"]){
-        player.speedX=2;
+        player.velocity.x=2;
     }else{
-        player.speedX=0;
+        player.velocity.x=0;
     }
     if(keys["space"]){
         if(gameData["time"]-gameData["lastBullet"]>100){
-            bullets.push({x:player.x, y:player.y});
+            bullets.push(new Bullet(player.position.x+11, player.position.y));
+            gameData["muzzleFlash"] = true;
             gameData["lastBullet"]=gameData["time"];
         }
     }
 }
 
-const displayEnemies = _ => {
-    let output = "";
-    for(let i=0;i<enemies.length;i++){
-        output+=`<div class='mini' style='top:${enemies[i].y}px; left:${enemies[i].x}px;'></div>`;
+const update = _ => {
+    player.move();
+    for(let i=0; i<bullets.length; i++){
+        bullets[i].move();
     }
-    document.getElementById('enemies').innerHTML = output;
-}
-
-const moveEnemies = _ => {
-    for(let i=0;i<enemies.length;i++){
-        enemies[i].y += 1;
-        if(enemies[i].y>550){
-            enemies[i].y = 0;
-            enemies[i].x = Math.floor(Math.random()*500);
-        }
+    for(let i=0; i<enemies.length; i++){
+        enemies[i].move();
     }
 }
 
-const displayBullets = _ => {
-    let output = "";
-    for(let i=0;i<bullets.length;i++){
-        output+=`<div class='bullet' style='top:${bullets[i].y}px; left:${bullets[i].x}px;'></div>`;
+const draw = _ => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    player.draw();
+    for(let i=0; i<bullets.length; i++){
+        bullets[i].draw();
     }
-    document.getElementById('bullets').innerHTML = output;
-}
-
-const moveBullets = _ => {
-    for(let i=0;i<bullets.length;i++){
-        bullets[i].y -= 2;
-        if(bullets[i].y<0){
-            bullets.shift();
-        }
+    for(let i=0; i<enemies.length; i++){
+        enemies[i].draw();
     }
 }
 
 const gameLoop = _ => {
     gameData["time"] = new Date()-gameData["startTime"];
-    document.getElementById("time").innerHTML=gameData["time"];
+    gameData["muzzleFlash"] = false;
     handleKeys();
-    movePlayer();
-    displayPlayer();
-    moveBullets();
-    displayBullets();
-    moveEnemies();
-    displayEnemies();
+    update();
+    draw();
+    
+    if(!gameData["gameOver"]){
+        requestAnimationFrame(gameLoop);
+    }
 }
 
 document.addEventListener('keydown', e => {
@@ -119,6 +190,9 @@ document.addEventListener('keydown', e => {
     }
     if(e.key === ' '){
         keys["space"] = true;
+    }
+    if(e.key === 'q'){
+        gameData["gameOver"] = true;
     }
 });
 
@@ -141,7 +215,6 @@ document.addEventListener('keyup', e => {
 });
 
 gameData["startTime"] = new Date();
+const player = new Player();
 
-setInterval(() => {
-    gameLoop();
-}, 10);
+gameLoop();
