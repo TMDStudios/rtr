@@ -2,14 +2,35 @@ const gameData = {
     "startTime": 0,
     "time": 0,
     "lastBullet": 0,
-    "gameOver": false,
-    "muzzleFlash": false
+    "gameOver": true,
+    "muzzleFlash": false,
+    "message": "Press space to start"
 }
 
 const canvas = document.querySelector('canvas');
-canvas.width = window.innerWidth;
+// canvas.width = window.innerWidth;
+canvas.width = 400;
 canvas.height = window.innerHeight;
 let ctx = canvas.getContext('2d');
+const music = new Audio('media/level1.ogg');
+const shotSound = new Audio('media/shot.ogg');
+
+const contain = (pos,width,height,isPlayer=false) => {
+    if(!isPlayer){
+        height=-height;
+    }
+    if(pos.x<0){
+        pos.x=0;
+    }else if(pos.x>canvas.width-width){
+        pos.x=canvas.width-width;
+    }
+    if(pos.y<0){
+        pos.y=0;
+    }else if(pos.y>canvas.height-height){
+        pos.y=canvas.height-height;
+    }
+    return pos;
+}
 
 class Player {
     constructor(){
@@ -46,6 +67,7 @@ class Player {
     move(){
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
+        contain(this.position,this.width,this.height,true);
     }
 }
 
@@ -84,6 +106,11 @@ class Enemy {
             y: 0
         }
 
+        this.distance = {
+            x: 0,
+            y: 0
+        }
+
         this.width = 25;
         this.height = 38;
 
@@ -99,10 +126,29 @@ class Enemy {
 
     move(){
         this.position.y++;
-        if(this.position.y>canvas.height){
+        if(this.position.y>canvas.height+this.height){
             this.position.x = Math.floor(Math.random() * canvas.width-25);
-            this.position.y=0;
+            this.position.y=-this.height*5;
         }
+        
+        this.distance.y = this.position.y-player.position.y;
+
+        if(this.distance.y>-150){
+            if(this.distance.y<50){
+                this.distance.x = this.position.x-player.position.x;
+                if(this.distance.x>0){
+                    if(this.distance.y%10==0){
+                        this.position.x-=1;
+                    }
+                }else{
+                    if(this.distance.y%10==0){
+                        this.position.x+=1;
+                    }
+                }
+            }
+        }
+
+        contain(this.position,this.width,this.height);
     }
 }
 
@@ -136,6 +182,8 @@ const handleKeys = _ => {
     if(keys["space"]){
         if(gameData["time"]-gameData["lastBullet"]>100){
             bullets.push(new Bullet(player.position.x+11, player.position.y));
+            shotSound.currentTime=0;
+            shotSound.play();
             gameData["muzzleFlash"] = true;
             gameData["lastBullet"]=gameData["time"];
         }
@@ -172,6 +220,8 @@ const gameLoop = _ => {
     
     if(!gameData["gameOver"]){
         requestAnimationFrame(gameLoop);
+    }else{
+        music.pause();
     }
 }
 
@@ -189,6 +239,11 @@ document.addEventListener('keydown', e => {
         keys["down"] = true;
     }
     if(e.key === ' '){
+        if(gameData["gameOver"]){
+            gameData["gameOver"]=false;
+            music.play();
+            gameLoop();
+        }
         keys["space"] = true;
     }
     if(e.key === 'q'){
