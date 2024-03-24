@@ -4,7 +4,13 @@ body {
     overflow: hidden;
     background-color: rgb(33,33,33);
     color: whitesmoke;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 canvas {
     background-color: rgba(255, 235, 205, 0.2);
+    margin: auto;
 }

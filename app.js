@@ -14,6 +14,8 @@ canvas.height = window.innerHeight;
 let ctx = canvas.getContext('2d');
 const music = new Audio('media/level1.ogg');
 const shotSound = new Audio('media/shot.ogg');
+const enemySound = new Audio('media/enemy.ogg');
+const playerSound = new Audio('media/player.ogg');
 
 const contain = (pos,width,height,isPlayer=false) => {
     if(!isPlayer){
@@ -35,8 +37,8 @@ const contain = (pos,width,height,isPlayer=false) => {
 class Player {
     constructor(){
         this.position = {
-            x: 110,
-            y: 110
+            x: 200,
+            y: 600
         }
         this.velocity = {
             x: 0,
@@ -145,10 +147,64 @@ class Enemy {
                         this.position.x+=1;
                     }
                 }
+                // This needs work
+                if(this.position.y>=player.position.y-player.height
+                    &&this.position.x>=player.position.x
+                    &&this.position.x<=player.position.x+player.width){
+                    // console.log(`collision ${this.position.x} - ${player.position.x}`)
+                    explosions.push(new Explosion(player.position.x, player.position.y));
+                    player.position.x=0; // Handle this later
+                    playerSound.play();
+                }
             }
         }
 
         contain(this.position,this.width,this.height);
+    }
+}
+
+class Explosion {
+    constructor(x,y){
+        this.position = {
+            x: x,
+            y: y
+        }
+
+        this.currentFrame = 0;
+        this.spriteLoc = [[106,0],[106,0],[106,0],[138,13],[138,13],[170,13],[170,13],[163,45],[170,13],[170,13],[138,13],[138,13],[106,0],[106,0]];
+        this.width = 32;
+        this.height = 32;
+
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        if(this.currentFrame<14){
+            ctx.drawImage(this.image, 
+                this.spriteLoc[this.currentFrame][0], 
+                this.spriteLoc[this.currentFrame][1], 
+                this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+            this.currentFrame++;
+        }else{
+            explosions.shift();
+        }
+    }
+}
+
+const detectCollisions = _ => {
+    for(let i=bullets.length-1; i>=0; i--){
+        for(let j=enemies.length-1; j>=0; j--){
+            if(bullets[i].position.y<=enemies[j].position.y
+                &&bullets[i].position.x>=enemies[j].position.x
+                &&bullets[i].position.x<enemies[j].position.x+enemies[j].width){
+                explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
+                enemySound.currentTime=0;
+                enemySound.play();
+                bullets.splice(i,1);
+                enemies.splice(j,1);
+            }
+        }
     }
 }
 
@@ -163,6 +219,7 @@ const keys = {
 const enemies = [new Enemy(),new Enemy(),new Enemy()];
 
 const bullets = [];
+const explosions = [];
 
 const handleKeys = _ => {
     if(keys["up"]){
@@ -180,7 +237,7 @@ const handleKeys = _ => {
         player.velocity.x=0;
     }
     if(keys["space"]){
-        if(gameData["time"]-gameData["lastBullet"]>100){
+        if(gameData["time"]-gameData["lastBullet"]>250){
             bullets.push(new Bullet(player.position.x+11, player.position.y));
             shotSound.currentTime=0;
             shotSound.play();
@@ -198,6 +255,7 @@ const update = _ => {
     for(let i=0; i<enemies.length; i++){
         enemies[i].move();
     }
+    detectCollisions();
 }
 
 const draw = _ => {
@@ -208,6 +266,9 @@ const draw = _ => {
     }
     for(let i=0; i<enemies.length; i++){
         enemies[i].draw();
+    }
+    for(let i=0; i<explosions.length; i++){
+        explosions[i].draw();
     }
 }
 
@@ -241,7 +302,7 @@ document.addEventListener('keydown', e => {
     if(e.key === ' '){
         if(gameData["gameOver"]){
             gameData["gameOver"]=false;
-            music.play();
+            // music.play();
             gameLoop();
         }
         keys["space"] = true;
