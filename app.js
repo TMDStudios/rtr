@@ -132,32 +132,6 @@ class Enemy {
             this.position.x = Math.floor(Math.random() * canvas.width-25);
             this.position.y=-this.height*5;
         }
-        
-        this.distance.y = this.position.y-player.position.y;
-
-        if(this.distance.y>-150){
-            if(this.distance.y<50){
-                this.distance.x = this.position.x-player.position.x;
-                if(this.distance.x>0){
-                    if(this.distance.y%10==0){
-                        this.position.x-=1;
-                    }
-                }else{
-                    if(this.distance.y%10==0){
-                        this.position.x+=1;
-                    }
-                }
-                // This needs work
-                if(this.position.y>=player.position.y-player.height
-                    &&this.position.x>=player.position.x
-                    &&this.position.x<=player.position.x+player.width){
-                    // console.log(`collision ${this.position.x} - ${player.position.x}`)
-                    explosions.push(new Explosion(player.position.x, player.position.y));
-                    player.position.x=0; // Handle this later
-                    playerSound.play();
-                }
-            }
-        }
 
         contain(this.position,this.width,this.height);
     }
@@ -195,7 +169,8 @@ class Explosion {
 const detectCollisions = _ => {
     for(let i=bullets.length-1; i>=0; i--){
         for(let j=enemies.length-1; j>=0; j--){
-            if(bullets[i].position.y<=enemies[j].position.y
+            if(bullets[i].position.y<=enemies[j].position.y+enemies[j].height
+                &&bullets[i].position.y+bullets[i].height>=enemies[j].position.y
                 &&bullets[i].position.x>=enemies[j].position.x
                 &&bullets[i].position.x<enemies[j].position.x+enemies[j].width){
                 explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
@@ -203,6 +178,31 @@ const detectCollisions = _ => {
                 enemySound.play();
                 bullets.splice(i,1);
                 enemies.splice(j,1);
+            }
+        }
+    }
+    for(let i=enemies.length-1; i>=0; i--){
+        enemies[i].distance.y = enemies[i].position.y-player.position.y;
+
+        if(enemies[i].distance.y>-player.height*3){
+            if(enemies[i].distance.y<player.height){
+                enemies[i].distance.x = enemies[i].position.x-player.position.x;
+                if(enemies[i].distance.x>0){
+                    if(enemies[i].distance.y%10==0){
+                        enemies[i].position.x-=1;
+                    }
+                }else{
+                    if(enemies[i].distance.y%10==0){
+                        enemies[i].position.x+=1;
+                    }
+                }
+                if(enemies[i].position.y+enemies[i].height>=player.position.y
+                    &&enemies[i].position.x+enemies[i].width>=player.position.x
+                    &&enemies[i].position.x<=player.position.x+player.width){
+                    explosions.push(new Explosion(player.position.x, player.position.y));
+                    player.position.x=0; // Handle this later
+                    playerSound.play();
+                }
             }
         }
     }
@@ -300,15 +300,17 @@ document.addEventListener('keydown', e => {
         keys["down"] = true;
     }
     if(e.key === ' '){
+        keys["space"] = true;
+    }
+    if(e.key === 'q'){
+        gameData["gameOver"] = true;
+    }
+    if(e.key === 'a'){
         if(gameData["gameOver"]){
             gameData["gameOver"]=false;
             // music.play();
             gameLoop();
         }
-        keys["space"] = true;
-    }
-    if(e.key === 'q'){
-        gameData["gameOver"] = true;
     }
 });
 
