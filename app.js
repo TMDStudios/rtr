@@ -4,7 +4,9 @@ const gameData = {
     "lastBullet": 0,
     "gameOver": true,
     "muzzleFlash": false,
-    "message": "Press space to start"
+    "message": "Press 'a' to start",
+    "lastMessage": 0,
+    "soundVolume": 1
 }
 
 const canvas = document.querySelector('canvas');
@@ -12,10 +14,14 @@ const canvas = document.querySelector('canvas');
 canvas.width = 400;
 canvas.height = window.innerHeight;
 let ctx = canvas.getContext('2d');
+ctx.font = '32px Arial';
+ctx.fillStyle = 'white';
+ctx.textAlign = 'center';
 const music = new Audio('media/level1.ogg');
 const shotSound = new Audio('media/shot.ogg');
 const enemySound = new Audio('media/enemy.ogg');
 const playerSound = new Audio('media/player.ogg');
+const sounds = [shotSound, enemySound, playerSound];
 
 const contain = (pos,width,height,isPlayer=false) => {
     if(!isPlayer){
@@ -167,6 +173,8 @@ class Explosion {
 }
 
 const detectCollisions = _ => {
+    let bulletsToRemove = [];
+    let enemiesToRemove = [];
     for(let i=bullets.length-1; i>=0; i--){
         for(let j=enemies.length-1; j>=0; j--){
             if(bullets[i].position.y<=enemies[j].position.y+enemies[j].height
@@ -176,8 +184,8 @@ const detectCollisions = _ => {
                 explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
                 enemySound.currentTime=0;
                 enemySound.play();
-                bullets.splice(i,1);
-                enemies.splice(j,1);
+                bulletsToRemove.push(i);
+                enemiesToRemove.push(j);
             }
         }
     }
@@ -202,10 +210,19 @@ const detectCollisions = _ => {
                     explosions.push(new Explosion(player.position.x, player.position.y));
                     player.position.x=0; // Handle this later
                     playerSound.play();
+                    enemiesToRemove.push(i);
                 }
             }
         }
     }
+    for(let i=0; i<enemiesToRemove.length; i++){
+        enemies.splice(enemiesToRemove[i],1);
+    }
+    enemiesToRemove=[];
+    for(let i=0; i<bulletsToRemove.length; i++){
+        bullets.splice(bulletsToRemove[i],1);
+    }
+    bulletsToRemove=[];
 }
 
 const keys = {
@@ -270,6 +287,13 @@ const draw = _ => {
     for(let i=0; i<explosions.length; i++){
         explosions[i].draw();
     }
+    if(gameData["gameOver"]){
+        ctx.fillText(gameData["message"], canvas.width/2, canvas.height/2);
+    }else{
+        if(gameData["lastMessage"]>gameData["time"]){
+            ctx.fillText(`Vol ${gameData["soundVolume"]}`, canvas.width/2, canvas.height/2);
+        }
+    }
 }
 
 const gameLoop = _ => {
@@ -311,6 +335,32 @@ document.addEventListener('keydown', e => {
             // music.play();
             gameLoop();
         }
+    }
+    if(e.key === 'n'){
+        enemies.push(new Enemy());
+    }
+    if(e.key === 'v'){
+        gameData["soundVolume"]++;
+        if(gameData["soundVolume"]>3){
+            gameData["soundVolume"]=0;
+        }
+        for(let i=0; i<sounds.length; i++){
+            switch(gameData["soundVolume"]){
+                case 0:
+                    sounds[i].volume=0;
+                    break;
+                case 1:
+                    sounds[i].volume=0.33;
+                    break;
+                case 2:
+                    sounds[i].volume=0.66;
+                    break;
+                default:
+                    sounds[i].volume=1;
+                    break;
+            }
+        }
+        gameData["lastMessage"]=gameData["time"]+500;
     }
 });
 
