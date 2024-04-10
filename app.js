@@ -11,12 +11,14 @@ const gameData = {
 
 const canvas = document.querySelector('canvas');
 // canvas.width = window.innerWidth;
-canvas.width = 400;
-canvas.height = window.innerHeight;
+canvas.width = 360;
+canvas.height = 740;
 let ctx = canvas.getContext('2d');
 ctx.font = '32px Arial';
 ctx.fillStyle = 'white';
 ctx.textAlign = 'center';
+const scale = 1;
+// ctx.scale(scaleFactor, scaleFactor);
 const music = new Audio('media/level1.ogg');
 const shotSound = new Audio('media/shot.ogg');
 const enemySound = new Audio('media/enemy.ogg');
@@ -172,6 +174,55 @@ class Explosion {
     }
 }
 
+class YellowLine {
+    constructor(x){
+        this.position = {
+            x: x,
+            y: 0
+        }
+
+        this.width = 4;
+        this.height = canvas.height;
+
+        this.imgX = 251;
+        this.imgY = 112;
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, 1, 1, this.position.x, this.position.y, this.width, this.height);
+    }
+}
+
+class WhiteLine {
+    constructor(x,y){
+        this.position = {
+            x: x,
+            y: y
+        }
+
+        this.width = 4;
+        this.height = 36;
+
+        this.imgX = 249;
+        this.imgY = 112;
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, 1, 1, this.position.x, this.position.y, this.width, this.height);
+    }
+
+    move(){
+        this.position.y+=4;
+        if(this.position.y>canvas.height+this.height){
+            this.position.y=-this.height;
+        }
+    }
+}
+
 const detectCollisions = _ => {
     let bulletsToRemove = [];
     let enemiesToRemove = [];
@@ -234,6 +285,17 @@ const keys = {
 }
 
 const enemies = [new Enemy(),new Enemy(),new Enemy()];
+const whiteLines = [];
+
+let whiteLineY = 0;
+for(let i=0; i<6; i++){
+    let x = 108;
+    for(let j=0; j<3; j++){
+        whiteLines.push(new WhiteLine(x,whiteLineY));
+        x+=68;
+    }
+    whiteLineY+=134;
+}
 
 const bullets = [];
 const explosions = [];
@@ -265,6 +327,9 @@ const handleKeys = _ => {
 }
 
 const update = _ => {
+    for(let i=0; i<whiteLines.length; i++){
+        whiteLines[i].move();
+    }
     player.move();
     for(let i=0; i<bullets.length; i++){
         bullets[i].move();
@@ -277,6 +342,11 @@ const update = _ => {
 
 const draw = _ => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    yellowLineLeft.draw();
+    yellowLineRight.draw();
+    for(let i=0; i<whiteLines.length; i++){
+        whiteLines[i].draw();
+    }
     player.draw();
     for(let i=0; i<bullets.length; i++){
         bullets[i].draw();
@@ -384,5 +454,7 @@ document.addEventListener('keyup', e => {
 
 gameData["startTime"] = new Date();
 const player = new Player();
+const yellowLineLeft = new YellowLine(36);
+const yellowLineRight = new YellowLine(canvas.width-40)
 
 gameLoop();
