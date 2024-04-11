@@ -2,6 +2,8 @@ const gameData = {
     "startTime": 0,
     "time": 0,
     "lastBullet": 0,
+    "lastEnemy": 0,
+    "enemySpots": [[118,-100],[186,-100],[254,-100],[118,-250],[186,-250],[254,-250],[118,-400],[186,-400],[254,-400]],
     "gameOver": true,
     "muzzleFlash": false,
     "message": "Press 'a' to start",
@@ -26,18 +28,17 @@ const playerSound = new Audio('media/player.ogg');
 const sounds = [shotSound, enemySound, playerSound];
 
 const contain = (pos,width,height,isPlayer=false) => {
-    if(!isPlayer){
-        height=-height;
+    if(isPlayer){
+        if(pos.y<0){
+            pos.y=0;
+        }else if(pos.y>canvas.height-height){
+            pos.y=canvas.height-height;
+        }
     }
     if(pos.x<0){
         pos.x=0;
     }else if(pos.x>canvas.width-width){
         pos.x=canvas.width-width;
-    }
-    if(pos.y<0){
-        pos.y=0;
-    }else if(pos.y>canvas.height-height){
-        pos.y=canvas.height-height;
     }
     return pos;
 }
@@ -110,10 +111,10 @@ class Bullet {
 }
 
 class Enemy {
-    constructor(){
+    constructor(x,y){
         this.position = {
-            x: Math.floor(Math.random() * canvas.width-25),
-            y: 0
+            x: x,
+            y: y
         }
 
         this.distance = {
@@ -128,6 +129,8 @@ class Enemy {
         this.imgY = 32;
         this.image = new Image();
         this.image.src = 'media/spritesheet.png';
+
+        // console.log(`new at ${this.position.x} ${this.position.y}`)
     }
 
     draw(){
@@ -136,10 +139,6 @@ class Enemy {
 
     move(){
         this.position.y++;
-        if(this.position.y>canvas.height+this.height){
-            this.position.x = Math.floor(Math.random() * canvas.width-25);
-            this.position.y=-this.height*5;
-        }
 
         contain(this.position,this.width,this.height);
     }
@@ -241,27 +240,31 @@ const detectCollisions = _ => {
         }
     }
     for(let i=enemies.length-1; i>=0; i--){
-        enemies[i].distance.y = enemies[i].position.y-player.position.y;
+        if(enemies[i].position.y>canvas.height+100){
+            enemiesToRemove.push(i);
+        }else{
+            enemies[i].distance.y = enemies[i].position.y-player.position.y;
 
-        if(enemies[i].distance.y>-player.height*3){
-            if(enemies[i].distance.y<player.height){
-                enemies[i].distance.x = enemies[i].position.x-player.position.x;
-                if(enemies[i].distance.x>0){
-                    if(enemies[i].distance.y%10==0){
-                        enemies[i].position.x-=1;
+            if(enemies[i].distance.y>-player.height*3){
+                if(enemies[i].distance.y<player.height){
+                    enemies[i].distance.x = enemies[i].position.x-player.position.x;
+                    if(enemies[i].distance.x>0){
+                        if(enemies[i].distance.y%10==0){
+                            enemies[i].position.x-=1;
+                        }
+                    }else{
+                        if(enemies[i].distance.y%10==0){
+                            enemies[i].position.x+=1;
+                        }
                     }
-                }else{
-                    if(enemies[i].distance.y%10==0){
-                        enemies[i].position.x+=1;
+                    if(enemies[i].position.y+enemies[i].height>=player.position.y
+                        &&enemies[i].position.x+enemies[i].width>=player.position.x
+                        &&enemies[i].position.x<=player.position.x+player.width){
+                        explosions.push(new Explosion(player.position.x, player.position.y));
+                        player.position.x=0; // Handle this later
+                        playerSound.play();
+                        enemiesToRemove.push(i);
                     }
-                }
-                if(enemies[i].position.y+enemies[i].height>=player.position.y
-                    &&enemies[i].position.x+enemies[i].width>=player.position.x
-                    &&enemies[i].position.x<=player.position.x+player.width){
-                    explosions.push(new Explosion(player.position.x, player.position.y));
-                    player.position.x=0; // Handle this later
-                    playerSound.play();
-                    enemiesToRemove.push(i);
                 }
             }
         }
@@ -284,7 +287,7 @@ const keys = {
     "space": false
 }
 
-const enemies = [new Enemy(),new Enemy(),new Enemy()];
+const enemies = [];
 const whiteLines = [];
 
 let whiteLineY = 0;
@@ -368,6 +371,20 @@ const draw = _ => {
 
 const gameLoop = _ => {
     gameData["time"] = new Date()-gameData["startTime"];
+    if(gameData["time"]-gameData["lastEnemy"]>500&&enemies.length<18){ // Change based on difficulty
+        if(gameData["enemySpots"].length>3){
+            const enemyIndex = Math.floor(Math.random()*(gameData["enemySpots"].length-1));
+            enemies.push(new Enemy(gameData["enemySpots"][enemyIndex][0],gameData["enemySpots"][enemyIndex][1]));
+            console.log(gameData["enemySpots"])
+            gameData["enemySpots"].splice(enemyIndex,1);
+            console.log(gameData["enemySpots"])
+        }else{
+            enemies.push(new Enemy(gameData["enemySpots"][0][0],gameData["enemySpots"][0][1]));
+            gameData["enemySpots"]=[[118,-100],[186,-100],[254,-100],[118,-250],[186,-250],[254,-250],[118,-400],[186,-400],[254,-400]];
+        }
+        gameData["lastEnemy"]=gameData["time"];
+    }
+
     gameData["muzzleFlash"] = false;
     handleKeys();
     update();
@@ -392,6 +409,7 @@ document.addEventListener('keydown', e => {
     }
     if(e.key === 'ArrowDown'){
         keys["down"] = true;
+        console.log(enemies.length)
     }
     if(e.key === ' '){
         keys["space"] = true;
