@@ -3,7 +3,7 @@ const gameData = {
     "time": 0,
     "lastBullet": 0,
     "lastEnemy": 0,
-    "enemySpots": [[118,-100],[186,-100],[254,-100],[118,-250],[186,-250],[254,-250],[118,-400],[186,-400],[254,-400]],
+    "enemySpots": [[60,-100],[128,-100],[196,-100],[264,-100]],
     "gameOver": true,
     "muzzleFlash": false,
     "message": "Press 'a' to start",
@@ -129,8 +129,6 @@ class Enemy {
         this.imgY = 32;
         this.image = new Image();
         this.image.src = 'media/spritesheet.png';
-
-        // console.log(`new at ${this.position.x} ${this.position.y}`)
     }
 
     draw(){
@@ -139,7 +137,6 @@ class Enemy {
 
     move(){
         this.position.y++;
-
         contain(this.position,this.width,this.height);
     }
 }
@@ -369,18 +366,21 @@ const draw = _ => {
     }
 }
 
+// Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
     gameData["time"] = new Date()-gameData["startTime"];
     if(gameData["time"]-gameData["lastEnemy"]>500&&enemies.length<18){ // Change based on difficulty
-        if(gameData["enemySpots"].length>3){
+        if(gameData["enemySpots"].length>2){
             const enemyIndex = Math.floor(Math.random()*(gameData["enemySpots"].length-1));
             enemies.push(new Enemy(gameData["enemySpots"][enemyIndex][0],gameData["enemySpots"][enemyIndex][1]));
-            console.log(gameData["enemySpots"])
-            gameData["enemySpots"].splice(enemyIndex,1);
-            console.log(gameData["enemySpots"])
+            const temp = gameData["enemySpots"][enemyIndex];
+            gameData["enemySpots"][enemyIndex] = gameData["enemySpots"][gameData["enemySpots"].length-1];
+            gameData["enemySpots"][gameData["enemySpots"].length-1] = temp;
+            gameData["enemySpots"].length-=1;
         }else{
             enemies.push(new Enemy(gameData["enemySpots"][0][0],gameData["enemySpots"][0][1]));
-            gameData["enemySpots"]=[[118,-100],[186,-100],[254,-100],[118,-250],[186,-250],[254,-250],[118,-400],[186,-400],[254,-400]];
+            enemies.push(new Enemy(gameData["enemySpots"][1][0],gameData["enemySpots"][1][1]+10));
+            gameData["enemySpots"]=[[60,-100],[128,-100],[196,-100],[264,-100]];
         }
         gameData["lastEnemy"]=gameData["time"];
     }
