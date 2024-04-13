@@ -27,6 +27,10 @@ const enemySound = new Audio('media/enemy.ogg');
 const playerSound = new Audio('media/player.ogg');
 const sounds = [shotSound, enemySound, playerSound];
 
+const enemySprites = [
+    [24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],[27,47,170,79],[28,48,116,78],[26,48,197,78],[29,56,87,70]
+];
+
 const contain = (pos,width,height,isPlayer=false) => {
     if(isPlayer){
         if(pos.y<0){
@@ -35,10 +39,10 @@ const contain = (pos,width,height,isPlayer=false) => {
             pos.y=canvas.height-height;
         }
     }
-    if(pos.x<0){
-        pos.x=0;
-    }else if(pos.x>canvas.width-width){
-        pos.x=canvas.width-width;
+    if(pos.x<30){
+        pos.x=30;
+    }else if(pos.x>canvas.width-width-30){
+        pos.x=canvas.width-width-30;
     }
     return pos;
 }
@@ -122,11 +126,13 @@ class Enemy {
             y: 0
         }
 
-        this.width = 25;
-        this.height = 38;
+        const spriteIndex = Math.floor(Math.random()*(enemySprites.length-1));
 
-        this.imgX = 106;
-        this.imgY = 32;
+        this.width = enemySprites[spriteIndex][0];
+        this.height = enemySprites[spriteIndex][1];
+
+        this.imgX = enemySprites[spriteIndex][2];
+        this.imgY = enemySprites[spriteIndex][3];
         this.image = new Image();
         this.image.src = 'media/spritesheet.png';
     }
@@ -258,7 +264,8 @@ const detectCollisions = _ => {
                         &&enemies[i].position.x+enemies[i].width>=player.position.x
                         &&enemies[i].position.x<=player.position.x+player.width){
                         explosions.push(new Explosion(player.position.x, player.position.y));
-                        player.position.x=0; // Handle this later
+                        explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
+                        player.position.x=30; // Handle this later
                         playerSound.play();
                         enemiesToRemove.push(i);
                     }
@@ -369,7 +376,7 @@ const draw = _ => {
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
     gameData["time"] = new Date()-gameData["startTime"];
-    if(gameData["time"]-gameData["lastEnemy"]>500&&enemies.length<18){ // Change based on difficulty
+    if(gameData["time"]-gameData["lastEnemy"]>750&&enemies.length<16){ // Change based on difficulty
         if(gameData["enemySpots"].length>2){
             const enemyIndex = Math.floor(Math.random()*(gameData["enemySpots"].length-1));
             enemies.push(new Enemy(gameData["enemySpots"][enemyIndex][0],gameData["enemySpots"][enemyIndex][1]));
