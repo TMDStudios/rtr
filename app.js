@@ -18,7 +18,6 @@ canvas.height = 740;
 let ctx = canvas.getContext('2d');
 ctx.font = '32px Arial';
 ctx.fillStyle = 'white';
-ctx.textAlign = 'center';
 const scale = 1;
 // ctx.scale(scaleFactor, scaleFactor);
 const music = new Audio('media/level1.ogg');
@@ -49,6 +48,9 @@ const contain = (pos,width,height,isPlayer=false) => {
 
 class Player {
     constructor(){
+        this.lives = 2;
+        this.rage = 0;
+
         this.position = {
             x: 200,
             y: 600
@@ -225,9 +227,45 @@ class WhiteLine {
     }
 }
 
+class Item {
+    constructor(x,y,type){
+        this.position = {
+            x: x,
+            y: y
+        }
+
+        if(type=='bullet'){
+            this.width = 4;
+            this.height = 36;
+            this.imgX = 249;
+            this.imgY = 112;
+        }else{
+            this.width = 10;
+            this.height = 10;
+            this.imgX = 22;
+            this.imgY = 15;
+        }
+
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x-this.width/2, this.position.y, this.width, this.height);
+    }
+
+    move(){
+        this.position.y++;
+        // if(this.position.y>canvas.height+this.height){
+        //     this.position.y=-this.height;
+        // }
+    }
+}
+
 const detectCollisions = _ => {
     let bulletsToRemove = [];
     let enemiesToRemove = [];
+    let itemsToRemove = [];
     for(let i=bullets.length-1; i>=0; i--){
         for(let j=enemies.length-1; j>=0; j--){
             if(bullets[i].position.y<=enemies[j].position.y+enemies[j].height
@@ -239,6 +277,7 @@ const detectCollisions = _ => {
                 enemySound.play();
                 bulletsToRemove.push(i);
                 enemiesToRemove.push(j);
+                items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
             }
         }
     }
@@ -266,10 +305,29 @@ const detectCollisions = _ => {
                         explosions.push(new Explosion(player.position.x, player.position.y));
                         explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
                         player.position.x=30; // Handle this later
+                        player.lives--;
                         playerSound.play();
                         enemiesToRemove.push(i);
+                        items.push(new Item(enemies[i].position.x+enemies[i].width/2,enemies[i].position.y,'rage'));
+                        if(player.lives<0){
+                            gameData.gameOver = true;
+                        }
                     }
                 }
+            }
+        }
+    }
+    for(let i=items.length-1; i>=0; i--){
+        if(items[i].position.y>canvas.height+100){
+            itemsToRemove.push(i);
+        }else{
+            if(items[i].position.y<=player.position.y+player.height
+                &&items[i].position.y+items[i].height>=player.position.y
+                &&items[i].position.x+items[i].width>=player.position.x
+                &&items[i].position.x<=player.position.x+player.width){
+                    //play sound
+                player.rage++;
+                itemsToRemove.push(i);
             }
         }
     }
@@ -281,6 +339,10 @@ const detectCollisions = _ => {
         bullets.splice(bulletsToRemove[i],1);
     }
     bulletsToRemove=[];
+    for(let i=0; i<itemsToRemove.length; i++){
+        items.splice(itemsToRemove[i],1);
+    }
+    itemsToRemove=[];
 }
 
 const keys = {
@@ -292,6 +354,7 @@ const keys = {
 }
 
 const enemies = [];
+const items = [];
 const whiteLines = [];
 
 let whiteLineY = 0;
@@ -344,6 +407,9 @@ const update = _ => {
     for(let i=0; i<enemies.length; i++){
         enemies[i].move();
     }
+    for(let i=0; i<items.length; i++){
+        items[i].move();
+    }
     detectCollisions();
 }
 
@@ -361,16 +427,27 @@ const draw = _ => {
     for(let i=0; i<enemies.length; i++){
         enemies[i].draw();
     }
+    for(let i=0; i<items.length; i++){
+        items[i].draw();
+    }
     for(let i=0; i<explosions.length; i++){
         explosions[i].draw();
     }
     if(gameData["gameOver"]){
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'center';
         ctx.fillText(gameData["message"], canvas.width/2, canvas.height/2);
     }else{
         if(gameData["lastMessage"]>gameData["time"]){
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center';
             ctx.fillText(`Vol ${gameData["soundVolume"]}`, canvas.width/2, canvas.height/2);
         }
     }
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Lives: ${player.lives}`, 10, 25)
+    ctx.fillText(`Rage: ${player.rage}`, 10, 50)
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
@@ -416,7 +493,7 @@ document.addEventListener('keydown', e => {
     }
     if(e.key === 'ArrowDown'){
         keys["down"] = true;
-        console.log(enemies.length)
+        // console.log(items.length)
     }
     if(e.key === ' '){
         keys["space"] = true;
@@ -432,7 +509,8 @@ document.addEventListener('keydown', e => {
         }
     }
     if(e.key === 'n'){
-        enemies.push(new Enemy());
+        // items.push(new Item(200,55,'rage'));
+        // console.log(items.length)
     }
     if(e.key === 'v'){
         gameData["soundVolume"]++;
