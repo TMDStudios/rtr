@@ -11,6 +11,6 @@ body {
     align-items: center;
 }
 canvas {
-    background-color: rgba(255, 235, 205, 0.33);
+    background-color: rgba(255, 235, 205, 0.25);
     margin: auto;
 }

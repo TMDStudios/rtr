@@ -2,6 +2,9 @@ const gameData = {
     "startTime": 0,
     "time": 0,
     "lastBullet": 0,
+    "bulletSpeed": 250,
+    "rampage": false,
+    "rampageStart": 0,
     "lastEnemy": 0,
     "enemySpots": [[60,-100],[128,-100],[196,-100],[264,-100]],
     "gameOver": true,
@@ -277,7 +280,12 @@ const detectCollisions = _ => {
                 enemySound.play();
                 bulletsToRemove.push(i);
                 enemiesToRemove.push(j);
-                items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
+                if(!gameData.rampage){
+                    const itemChance = Math.floor(Math.random()*5);
+                    if(itemChance==0){
+                        items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
+                    }
+                }
             }
         }
     }
@@ -308,7 +316,6 @@ const detectCollisions = _ => {
                         player.lives--;
                         playerSound.play();
                         enemiesToRemove.push(i);
-                        items.push(new Item(enemies[i].position.x+enemies[i].width/2,enemies[i].position.y,'rage'));
                         if(player.lives<0){
                             gameData.gameOver = true;
                         }
@@ -328,6 +335,14 @@ const detectCollisions = _ => {
                     //play sound
                 player.rage++;
                 itemsToRemove.push(i);
+                if(!gameData.rampage){
+                    if(player.rage>=10){
+                        player.rage=10;
+                        gameData.bulletSpeed=100;
+                        gameData.rampage=true;
+                        gameData.rampageStart=gameData.time;
+                    }
+                }
             }
         }
     }
@@ -386,7 +401,7 @@ const handleKeys = _ => {
         player.velocity.x=0;
     }
     if(keys["space"]){
-        if(gameData["time"]-gameData["lastBullet"]>250){
+        if(gameData["time"]-gameData["lastBullet"]>gameData["bulletSpeed"]){
             bullets.push(new Bullet(player.position.x+11, player.position.y));
             shotSound.currentTime=0;
             shotSound.play();
@@ -467,6 +482,13 @@ const gameLoop = _ => {
             gameData["enemySpots"]=[[60,-100],[128,-100],[196,-100],[264,-100]];
         }
         gameData["lastEnemy"]=gameData["time"];
+    }
+    if(gameData.rampage){
+        if(gameData.time-gameData.rampageStart>10000){
+            player.rage=0;
+            gameData.bulletSpeed=250;
+            gameData.rampage=false;
+        }
     }
 
     gameData["muzzleFlash"] = false;
