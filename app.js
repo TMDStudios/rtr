@@ -3,6 +3,7 @@ const gameData = {
     "time": 0,
     "lastBullet": 0,
     "bulletSpeed": 250,
+    "tempBulletSpeed": 250,
     "rampage": false,
     "rampageStart": 0,
     "lastEnemy": 0,
@@ -237,11 +238,13 @@ class Item {
             y: y
         }
 
+        this.type=type;
+
         if(type=='bullet'){
-            this.width = 4;
-            this.height = 36;
-            this.imgX = 249;
-            this.imgY = 112;
+            this.width = 10;
+            this.height = 10;
+            this.imgX = 22;
+            this.imgY = 65;
         }else{
             this.width = 10;
             this.height = 10;
@@ -281,9 +284,11 @@ const detectCollisions = _ => {
                 bulletsToRemove.push(i);
                 enemiesToRemove.push(j);
                 if(!gameData.rampage){
-                    const itemChance = Math.floor(Math.random()*5);
+                    const itemChance = Math.floor(Math.random()*10);
                     if(itemChance==0){
                         items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
+                    }else if(itemChance==1){
+                        items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'bullet'));
                     }
                 }
             }
@@ -314,6 +319,12 @@ const detectCollisions = _ => {
                         explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
                         player.position.x=30; // Handle this later
                         player.lives--;
+                        gameData.bulletSpeed=250;
+                        gameData.tempBulletSpeed=gameData.bulletSpeed;
+                        if(gameData.rampage){
+                            player.rage=0;
+                            gameData.rampage=false;
+                        }
                         playerSound.play();
                         enemiesToRemove.push(i);
                         if(player.lives<0){
@@ -333,14 +344,22 @@ const detectCollisions = _ => {
                 &&items[i].position.x+items[i].width>=player.position.x
                 &&items[i].position.x<=player.position.x+player.width){
                     //play sound
-                player.rage++;
                 itemsToRemove.push(i);
-                if(!gameData.rampage){
-                    if(player.rage>=10){
-                        player.rage=10;
-                        gameData.bulletSpeed=100;
-                        gameData.rampage=true;
-                        gameData.rampageStart=gameData.time;
+                // console.log(items[i].type)
+                if(items[i].type=='bullet'){
+                    if(gameData.bulletSpeed>150){
+                        gameData.bulletSpeed-=10;
+                        gameData.tempBulletSpeed=gameData.bulletSpeed;
+                    }
+                }else{
+                    player.rage++;
+                    if(!gameData.rampage){
+                        if(player.rage>=10){
+                            player.rage=10;
+                            gameData.bulletSpeed=100;
+                            gameData.rampage=true;
+                            gameData.rampageStart=gameData.time;
+                        }
                     }
                 }
             }
@@ -463,6 +482,7 @@ const draw = _ => {
     ctx.textAlign = 'left';
     ctx.fillText(`Lives: ${player.lives}`, 10, 25)
     ctx.fillText(`Rage: ${player.rage}`, 10, 50)
+    ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75)
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
@@ -486,7 +506,7 @@ const gameLoop = _ => {
     if(gameData.rampage){
         if(gameData.time-gameData.rampageStart>10000){
             player.rage=0;
-            gameData.bulletSpeed=250;
+            gameData.bulletSpeed=gameData.tempBulletSpeed;
             gameData.rampage=false;
         }
     }
