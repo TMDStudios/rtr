@@ -12,7 +12,8 @@ const gameData = {
     "muzzleFlash": false,
     "message": "Press 'a' to start",
     "lastMessage": 0,
-    "soundVolume": 1
+    "soundVolume": 1,
+    "bossFight": false
 }
 
 const canvas = document.querySelector('canvas');
@@ -121,7 +122,7 @@ class Bullet {
 }
 
 class Enemy {
-    constructor(x,y){
+    constructor(x,y,isDumpTruck=false){
         this.position = {
             x: x,
             y: y
@@ -132,7 +133,9 @@ class Enemy {
             y: 0
         }
 
-        const spriteIndex = Math.floor(Math.random()*(enemySprites.length-1));
+        let spriteIndex = isDumpTruck ? enemySprites.length-1 : Math.floor(Math.random()*(enemySprites.length-1));
+
+        this.isDumpTruck = isDumpTruck;
 
         this.width = enemySprites[spriteIndex][0];
         this.height = enemySprites[spriteIndex][1];
@@ -148,8 +151,14 @@ class Enemy {
     }
 
     move(){
-        this.position.y++;
-        contain(this.position,this.width,this.height);
+        if(this.isDumpTruck){
+            if(this.position.y<canvas.height/2){
+                this.position.y+=0.5;
+            }
+        }else{
+            this.position.y++;
+            contain(this.position,this.width,this.height);
+        }
     }
 }
 
@@ -262,9 +271,21 @@ class Item {
 
     move(){
         this.position.y++;
-        // if(this.position.y>canvas.height+this.height){
-        //     this.position.y=-this.height;
-        // }
+    }
+}
+
+const resetPlayer = _ => {
+    player.position.x=30; // Handle this later
+    player.lives--;
+    gameData.bulletSpeed=250;
+    gameData.tempBulletSpeed=gameData.bulletSpeed;
+    if(gameData.rampage){
+        player.rage=0;
+        gameData.rampage=false;
+    }
+    playerSound.play();
+    if(player.lives<0){
+        gameData.gameOver = true;
     }
 }
 
@@ -275,22 +296,24 @@ const detectCollisions = _ => {
     for(let i=bullets.length-1; i>=0; i--){
         for(let j=enemies.length-1; j>=0; j--){
             if(bullets[i].position.y<=enemies[j].position.y+enemies[j].height
-                &&bullets[i].position.y+bullets[i].height>=enemies[j].position.y
-                &&bullets[i].position.x>=enemies[j].position.x
-                &&bullets[i].position.x<enemies[j].position.x+enemies[j].width){
-                explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
-                enemySound.currentTime=0;
-                enemySound.play();
-                bulletsToRemove.push(i);
-                enemiesToRemove.push(j);
-                if(!gameData.rampage){
-                    const itemChance = Math.floor(Math.random()*10);
-                    if(itemChance==0){
-                        items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
-                    }else if(itemChance==1){
-                        items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'bullet'));
+            &&bullets[i].position.y+bullets[i].height>=enemies[j].position.y
+            &&bullets[i].position.x>=enemies[j].position.x
+            &&bullets[i].position.x<enemies[j].position.x+enemies[j].width){
+                if(!enemies[j].isDumpTruck){
+                    explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
+                    enemySound.currentTime=0;
+                    enemySound.play();
+                    enemiesToRemove.push(j);
+                    if(!gameData.rampage){
+                        const itemChance = Math.floor(Math.random()*10);
+                        if(itemChance==0){
+                            items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
+                        }else if(itemChance==1){
+                            items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'bullet'));
+                        }
                     }
                 }
+                bulletsToRemove.push(i);
             }
         }
     }
@@ -298,40 +321,37 @@ const detectCollisions = _ => {
         if(enemies[i].position.y>canvas.height+100){
             enemiesToRemove.push(i);
         }else{
-            enemies[i].distance.y = enemies[i].position.y-player.position.y;
-
-            if(enemies[i].distance.y>-player.height*3){
-                if(enemies[i].distance.y<player.height){
-                    enemies[i].distance.x = enemies[i].position.x-player.position.x;
-                    if(enemies[i].distance.x>0){
-                        if(enemies[i].distance.y%10==0){
-                            enemies[i].position.x-=1;
+            if(!enemies[i].isDumpTruck){
+                enemies[i].distance.y = enemies[i].position.y-player.position.y;
+                if(enemies[i].distance.y>-player.height*3){
+                    if(enemies[i].distance.y<player.height){
+                        enemies[i].distance.x = enemies[i].position.x-player.position.x;
+                        if(enemies[i].distance.x>0){
+                            if(enemies[i].distance.y%10==0){
+                                enemies[i].position.x-=1;
+                            }
+                        }else{
+                            if(enemies[i].distance.y%10==0){
+                                enemies[i].position.x+=1;
+                            }
                         }
-                    }else{
-                        if(enemies[i].distance.y%10==0){
-                            enemies[i].position.x+=1;
-                        }
-                    }
-                    if(enemies[i].position.y+enemies[i].height>=player.position.y
+                        if(enemies[i].position.y+enemies[i].height>=player.position.y
                         &&enemies[i].position.x+enemies[i].width>=player.position.x
                         &&enemies[i].position.x<=player.position.x+player.width){
-                        explosions.push(new Explosion(player.position.x, player.position.y));
-                        explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
-                        player.position.x=30; // Handle this later
-                        player.lives--;
-                        gameData.bulletSpeed=250;
-                        gameData.tempBulletSpeed=gameData.bulletSpeed;
-                        if(gameData.rampage){
-                            player.rage=0;
-                            gameData.rampage=false;
-                        }
-                        playerSound.play();
-                        enemiesToRemove.push(i);
-                        if(player.lives<0){
-                            gameData.gameOver = true;
+                            explosions.push(new Explosion(player.position.x, player.position.y));
+                            explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
+                            enemiesToRemove.push(i);
+                            resetPlayer();
                         }
                     }
                 }
+            }else{
+                if(enemies[i].position.y+enemies[i].height>=player.position.y
+                    &&enemies[i].position.x+enemies[i].width>=player.position.x
+                    &&enemies[i].position.x<=player.position.x+player.width){
+                        explosions.push(new Explosion(player.position.x, player.position.y));
+                        resetPlayer();
+                    }
             }
         }
     }
@@ -340,10 +360,10 @@ const detectCollisions = _ => {
             itemsToRemove.push(i);
         }else{
             if(items[i].position.y<=player.position.y+player.height
-                &&items[i].position.y+items[i].height>=player.position.y
-                &&items[i].position.x+items[i].width>=player.position.x
-                &&items[i].position.x<=player.position.x+player.width){
-                    //play sound
+            &&items[i].position.y+items[i].height>=player.position.y
+            &&items[i].position.x+items[i].width>=player.position.x
+            &&items[i].position.x<=player.position.x+player.width){
+                //play sound
                 itemsToRemove.push(i);
                 // console.log(items[i].type)
                 if(items[i].type=='bullet'){
@@ -430,6 +450,34 @@ const handleKeys = _ => {
     }
 }
 
+const startBossFight = _ => {
+    enemySprites.push([54,123,0,3]);
+    enemies.push(new Enemy(47,-100,true),new Enemy(117,-100,true),new Enemy(186,-100,true),new Enemy(257,-100,true));
+}
+
+const convertTime = totalMs => {
+    let ms = totalMs % 1000;
+    let minutes = Math.floor((totalMs / 60000)) % 60;
+    let seconds = Math.floor((totalMs / 1000)) % 60;
+    if(seconds<10){
+        if(ms<10){
+            return ''+minutes+':0'+seconds+':00'+ms+'';
+        }else if(ms<100){
+            return ''+minutes+':0'+seconds+':0'+ms+'';
+        }else{
+            return ''+minutes+':0'+seconds+':'+ms+'';
+        }
+    }else{
+        if(ms<10){
+            return ''+minutes+':'+seconds+':00'+ms+'';
+        }else if(ms<100){
+            return ''+minutes+':'+seconds+':0'+ms+'';
+        }else{
+            return ''+minutes+':'+seconds+':'+ms+'';
+        }
+    }
+}
+
 const update = _ => {
     for(let i=0; i<whiteLines.length; i++){
         whiteLines[i].move();
@@ -480,15 +528,27 @@ const draw = _ => {
     }
     ctx.font = '16px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Lives: ${player.lives}`, 10, 25)
-    ctx.fillText(`Rage: ${player.rage}`, 10, 50)
-    ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75)
+    ctx.fillText(`Lives: ${player.lives}`, 10, 25);
+    ctx.fillText(`Rage: ${player.rage}`, 10, 50);
+    ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75);
+    if(gameData.time<12000){ // 2 minutes == 120000)
+        ctx.fillText(`Time: ${convertTime(gameData.time)}`, 10, 100);
+    }else{
+        ctx.fillText(`BOSS`, 10, 100);
+        if(!gameData.bossFight){
+            enemies.length=0;
+            bullets.length=0;
+            items.length=0;
+            startBossFight();
+            gameData.bossFight=true;
+        }
+    }
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
     gameData["time"] = new Date()-gameData["startTime"];
-    if(gameData["time"]-gameData["lastEnemy"]>750&&enemies.length<16){ // Change based on difficulty
+    if(gameData["time"]-gameData["lastEnemy"]>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
         if(gameData["enemySpots"].length>2){
             const enemyIndex = Math.floor(Math.random()*(gameData["enemySpots"].length-1));
             enemies.push(new Enemy(gameData["enemySpots"][enemyIndex][0],gameData["enemySpots"][enemyIndex][1]));
