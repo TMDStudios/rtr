@@ -32,7 +32,7 @@ const playerSound = new Audio('media/player.ogg');
 const sounds = [shotSound, enemySound, playerSound];
 
 const enemySprites = [
-    [24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],[27,47,170,79],[28,48,116,78],[26,48,197,78],[29,56,87,70]
+    [29,56,87,70],[24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],[27,47,170,79],[28,48,116,78],[26,48,197,78]
 ];
 
 const contain = (pos,width,height,isPlayer=false) => {
@@ -122,7 +122,7 @@ class Bullet {
 }
 
 class Enemy {
-    constructor(x,y,isDumpTruck=false){
+    constructor(x,y,isDumpTruck=false,isBoss=false){
         this.position = {
             x: x,
             y: y
@@ -136,6 +136,12 @@ class Enemy {
         let spriteIndex = isDumpTruck ? enemySprites.length-1 : Math.floor(Math.random()*(enemySprites.length-1));
 
         this.isDumpTruck = isDumpTruck;
+
+        this.isBoss = isBoss;
+        this.moveLeft = Math.random()>0.5;
+        if(this.isBoss){
+            spriteIndex=0;
+        }
 
         this.width = enemySprites[spriteIndex][0];
         this.height = enemySprites[spriteIndex][1];
@@ -155,6 +161,17 @@ class Enemy {
             if(this.position.y<canvas.height/2){
                 this.position.y+=0.5;
             }
+        }else if(this.isBoss){
+            if(this.position.y<canvas.height/2-100){
+                this.position.y+=0.5;
+            }
+            if(this.position.x<32){
+                this.moveLeft=false;
+            }
+            if(this.position.x>canvas.width-32-this.width){
+                this.moveLeft=true;
+            }
+            this.moveLeft ? this.position.x-=0.25 : this.position.x+=0.25;
         }else{
             this.position.y++;
             contain(this.position,this.width,this.height);
@@ -318,6 +335,25 @@ const detectCollisions = _ => {
         }
     }
     for(let i=enemies.length-1; i>=0; i--){
+        if(enemies[i].isBoss&&enemies.length>5){
+            if(enemies.length>6){
+                if(enemies[5].position.x+enemies[5].width>=enemies[6].position.x){
+                    enemies[5].moveLeft=!enemies[5].moveLeft;
+                    enemies[6].moveLeft=!enemies[6].moveLeft;
+                }
+                if(enemies[5].position.x<=enemies[4].position.x+enemies[4].width){
+                    enemies[5].moveLeft=!enemies[5].moveLeft;
+                    enemies[4].moveLeft=!enemies[4].moveLeft;
+                }
+            }else{
+                if(enemies[4].position.x+enemies[4].width>canvas.width/2-20){
+                    enemies[4].moveLeft=true;
+                }
+                if(enemies[5].position.x<canvas.width/2+20){
+                    enemies[5].moveLeft=false;
+                }
+            }
+        }
         if(enemies[i].position.y>canvas.height+100){
             enemiesToRemove.push(i);
         }else{
@@ -453,6 +489,7 @@ const handleKeys = _ => {
 const startBossFight = _ => {
     enemySprites.push([54,123,0,3]);
     enemies.push(new Enemy(47,-100,true),new Enemy(117,-100,true),new Enemy(186,-100,true),new Enemy(257,-100,true));
+    enemies.push(new Enemy(60,-160,false,true),new Enemy(120,-160,false,true),new Enemy(180,-160,false,true));
 }
 
 const convertTime = totalMs => {
