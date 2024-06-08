@@ -13,7 +13,10 @@ const gameData = {
     "message": "Press 'a' to start",
     "lastMessage": 0,
     "soundVolume": 1,
-    "bossFight": false
+    "bossFight": false,
+    "lastTrash": 0,
+    "levelComplete": false,
+    "nextLevel": false
 }
 
 const canvas = document.querySelector('canvas');
@@ -116,7 +119,7 @@ class Bullet {
     move(){
         this.position.y -= 4;
         if(this.position.y<0){
-            bullets.shift();
+            bullets = bullets.filter(bullet=>bullet!==this);
         }
     }
 }
@@ -158,8 +161,17 @@ class Enemy {
 
     move(){
         if(this.isDumpTruck){
-            if(this.position.y<canvas.height/2){
-                this.position.y+=0.5;
+            if(gameData.levelComplete){
+                if(this.position.y+this.height>-5){
+                    this.position.y--;
+                }else{
+                    enemies.length=0;
+                    gameData.nextLevel=true;
+                }
+            }else{
+                if(this.position.y<canvas.height/2){
+                    this.position.y+=0.5;
+                }
             }
         }else if(this.isBoss){
             if(this.position.y<canvas.height/2-100){
@@ -182,8 +194,8 @@ class Enemy {
 class Explosion {
     constructor(x,y){
         this.position = {
-            x: x,
-            y: y
+            x: x-16, // offset for exp width
+            y: y+16 // offset for exp height
         }
 
         this.currentFrame = 0;
@@ -260,7 +272,7 @@ class WhiteLine {
 class Item {
     constructor(x,y,type){
         this.position = {
-            x: x,
+            x: x-5, // offset for item width
             y: y
         }
 
@@ -283,11 +295,40 @@ class Item {
     }
 
     draw(){
-        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x-this.width/2, this.position.y, this.width, this.height);
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
     }
 
     move(){
         this.position.y++;
+    }
+}
+
+class Trash {
+    constructor(x,y){
+        this.position = {
+            x: x,
+            y: y
+        }
+
+        this.width = 25;
+        this.height = 20;
+        this.imgX = 202;
+        this.imgY = 24;
+
+        this.image = new Image();
+        this.image.src = 'media/spritesheet.png';
+
+        const angles = [-0.5,-0.25,0,0.25,0.5];
+        this.speedX = angles[Math.floor(Math.random()*angles.length)];
+    }
+
+    draw(){
+        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+    }
+
+    move(){
+        this.position.y+=0.75;
+        this.position.x+=this.speedX;
     }
 }
 
@@ -307,20 +348,21 @@ const resetPlayer = _ => {
 }
 
 const detectCollisions = _ => {
-    let bulletsToRemove = [];
-    let enemiesToRemove = [];
-    let itemsToRemove = [];
+    let bulletsToRemove = new Set();
+    let enemiesToRemove = new Set();
+    let itemsToRemove = new Set();
+    let trashToRemove = new Set();
     for(let i=bullets.length-1; i>=0; i--){
         for(let j=enemies.length-1; j>=0; j--){
             if(bullets[i].position.y<=enemies[j].position.y+enemies[j].height
             &&bullets[i].position.y+bullets[i].height>=enemies[j].position.y
-            &&bullets[i].position.x>=enemies[j].position.x
-            &&bullets[i].position.x<enemies[j].position.x+enemies[j].width){
+            &&bullets[i].position.x+bullets[i].width>=enemies[j].position.x
+            &&bullets[i].position.x<=enemies[j].position.x+enemies[j].width){
                 if(!enemies[j].isDumpTruck){
-                    explosions.push(new Explosion(enemies[j].position.x, enemies[j].position.y));
+                    explosions.push(new Explosion(enemies[j].position.x+enemies[j].width/2, enemies[j].position.y));
                     enemySound.currentTime=0;
                     enemySound.play();
-                    enemiesToRemove.push(j);
+                    enemiesToRemove.add(j);
                     if(!gameData.rampage){
                         const itemChance = Math.floor(Math.random()*10);
                         if(itemChance==0){
@@ -330,7 +372,21 @@ const detectCollisions = _ => {
                         }
                     }
                 }
-                bulletsToRemove.push(i);
+                bulletsToRemove.add(i);
+                break;
+            }
+        }
+        for(let j=trash.length-1; j>=0; j--){
+            if(bullets[i].position.y<=trash[j].position.y+trash[j].height
+            &&bullets[i].position.y+bullets[i].height>=trash[j].position.y
+            &&bullets[i].position.x+bullets[i].width>=trash[j].position.x
+            &&bullets[i].position.x<=trash[j].position.x+trash[j].width){
+                explosions.push(new Explosion(trash[j].position.x+trash[j].width/2, trash[j].position.y));
+                enemySound.currentTime=0;
+                enemySound.play();
+                trashToRemove.add(j);
+                bulletsToRemove.add(i);
+                break;
             }
         }
     }
@@ -355,7 +411,7 @@ const detectCollisions = _ => {
             }
         }
         if(enemies[i].position.y>canvas.height+100){
-            enemiesToRemove.push(i);
+            enemiesToRemove.add(i);
         }else{
             if(!enemies[i].isDumpTruck){
                 enemies[i].distance.y = enemies[i].position.y-player.position.y;
@@ -376,7 +432,7 @@ const detectCollisions = _ => {
                         &&enemies[i].position.x<=player.position.x+player.width){
                             explosions.push(new Explosion(player.position.x, player.position.y));
                             explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
-                            enemiesToRemove.push(i);
+                            enemiesToRemove.add(i);
                             resetPlayer();
                         }
                     }
@@ -393,14 +449,14 @@ const detectCollisions = _ => {
     }
     for(let i=items.length-1; i>=0; i--){
         if(items[i].position.y>canvas.height+100){
-            itemsToRemove.push(i);
+            itemsToRemove.add(i);
         }else{
             if(items[i].position.y<=player.position.y+player.height
             &&items[i].position.y+items[i].height>=player.position.y
             &&items[i].position.x+items[i].width>=player.position.x
             &&items[i].position.x<=player.position.x+player.width){
                 //play sound
-                itemsToRemove.push(i);
+                itemsToRemove.add(i);
                 // console.log(items[i].type)
                 if(items[i].type=='bullet'){
                     if(gameData.bulletSpeed>150){
@@ -421,18 +477,37 @@ const detectCollisions = _ => {
             }
         }
     }
-    for(let i=0; i<enemiesToRemove.length; i++){
-        enemies.splice(enemiesToRemove[i],1);
+    for(let i=trash.length-1; i>=0; i--){
+        if(trash[i].position.y>canvas.height+100){
+            trashToRemove.add(i);
+        }else{
+            if(trash[i].position.y<=player.position.y+player.height
+            &&trash[i].position.y+trash[i].height-8>=player.position.y // Slight offset on trash height due to sprite shape
+            &&trash[i].position.x+trash[i].width>=player.position.x
+            &&trash[i].position.x<=player.position.x+player.width){
+                explosions.push(new Explosion(player.position.x, player.position.y));
+                explosions.push(new Explosion(trash[i].position.x, trash[i].position.y));
+                trashToRemove.add(i);
+                resetPlayer();
+                //play sound
+            }
+        }
     }
-    enemiesToRemove=[];
-    for(let i=0; i<bulletsToRemove.length; i++){
-        bullets.splice(bulletsToRemove[i],1);
+
+
+    bullets = bullets.filter((_,i)=>!bulletsToRemove.has(i));
+    enemies = enemies.filter((_,i)=>!enemiesToRemove.has(i));
+    items = items.filter((_,i)=>!itemsToRemove.has(i));
+    trash = trash.filter((_,i)=>!trashToRemove.has(i));
+
+    bulletsToRemove=new Set();
+    enemiesToRemove=new Set();
+    itemsToRemove=new Set();
+    trashToRemove=new Set();
+
+    if(enemies.length==4&&gameData.bossFight&&!gameData.levelComplete){
+        gameData.levelComplete=true;
     }
-    bulletsToRemove=[];
-    for(let i=0; i<itemsToRemove.length; i++){
-        items.splice(itemsToRemove[i],1);
-    }
-    itemsToRemove=[];
 }
 
 const keys = {
@@ -443,8 +518,9 @@ const keys = {
     "space": false
 }
 
-const enemies = [];
-const items = [];
+let enemies = [];
+let items = [];
+let trash = [];
 const whiteLines = [];
 
 let whiteLineY = 0;
@@ -457,7 +533,7 @@ for(let i=0; i<6; i++){
     whiteLineY+=134;
 }
 
-const bullets = [];
+let bullets = [];
 const explosions = [];
 
 const handleKeys = _ => {
@@ -529,6 +605,9 @@ const update = _ => {
     for(let i=0; i<items.length; i++){
         items[i].move();
     }
+    for(let i=0; i<trash.length; i++){
+        trash[i].move();
+    }
     detectCollisions();
 }
 
@@ -549,6 +628,9 @@ const draw = _ => {
     for(let i=0; i<items.length; i++){
         items[i].draw();
     }
+    for(let i=0; i<trash.length; i++){
+        trash[i].draw();
+    }
     for(let i=0; i<explosions.length; i++){
         explosions[i].draw();
     }
@@ -556,6 +638,10 @@ const draw = _ => {
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(gameData["message"], canvas.width/2, canvas.height/2);
+    }else if(gameData["nextLevel"]){
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText("Level Complete", canvas.width/2, canvas.height/2);
     }else{
         if(gameData["lastMessage"]>gameData["time"]){
             ctx.font = '32px Arial';
@@ -605,6 +691,16 @@ const gameLoop = _ => {
             player.rage=0;
             gameData.bulletSpeed=gameData.tempBulletSpeed;
             gameData.rampage=false;
+        }
+    }
+    if(gameData.bossFight&&!gameData.levelComplete){
+        if(gameData["time"]-gameData["lastTrash"]>1500){
+            for(let i=0; i<4; i++){
+                if(enemies[i].position.y>canvas.height*0.33){
+                    trash.push(new Trash(enemies[i].position.x+enemies[i].width/2,enemies[i].position.y+enemies[i].height-33));
+                }
+            }
+            gameData["lastTrash"]=gameData["time"];
         }
     }
 
