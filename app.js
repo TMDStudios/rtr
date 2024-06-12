@@ -29,10 +29,14 @@ ctx.fillStyle = 'white';
 const scale = 1;
 // ctx.scale(scaleFactor, scaleFactor);
 const music = new Audio('media/level1.ogg');
+const bossMusic = new Audio('media/boss_fight.ogg');
+const rampageMusic = new Audio('media/rampage.ogg');
 const shotSound = new Audio('media/shot.ogg');
 const enemySound = new Audio('media/enemy.ogg');
 const playerSound = new Audio('media/player.ogg');
-const sounds = [shotSound, enemySound, playerSound];
+const explosionSound = new Audio('media/explosion.ogg');
+const powSound = new Audio('media/pow.ogg');
+const sounds = [shotSound, enemySound, playerSound, explosionSound, powSound];
 
 const enemySprites = [
     [29,56,87,70],[24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],[27,47,170,79],[28,48,116,78],[26,48,197,78]
@@ -84,7 +88,7 @@ class Player {
 
     draw(){
         ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
-        if(gameData["muzzleFlash"]){
+        if(gameData.muzzleFlash){
             ctx.drawImage(this.image, this.muzzleX, this.muzzleY, this.muzzleW, this.muzzleH, this.position.x+8, this.position.y-8, this.muzzleW, this.muzzleH);
         }
     }
@@ -192,11 +196,12 @@ class Enemy {
 }
 
 class Explosion {
-    constructor(x,y){
+    constructor(x,y,isNuke){
         this.position = {
             x: x-16, // offset for exp width
             y: y+16 // offset for exp height
         }
+        this.isNuke=isNuke;
 
         this.currentFrame = 0;
         this.spriteLoc = [[106,0],[106,0],[106,0],[138,13],[138,13],[170,13],[170,13],[163,45],[170,13],[170,13],[138,13],[138,13],[106,0],[106,0]];
@@ -209,10 +214,17 @@ class Explosion {
 
     draw(){
         if(this.currentFrame<14){
-            ctx.drawImage(this.image, 
-                this.spriteLoc[this.currentFrame][0], 
-                this.spriteLoc[this.currentFrame][1], 
-                this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+            if(this.isNuke){
+                ctx.drawImage(this.image, 
+                    this.spriteLoc[this.currentFrame][0], 
+                    this.spriteLoc[this.currentFrame][1], 
+                    this.width, this.height, this.position.x, this.position.y, 320, 320);
+            }else{
+                ctx.drawImage(this.image, 
+                    this.spriteLoc[this.currentFrame][0], 
+                    this.spriteLoc[this.currentFrame][1], 
+                    this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+            }
             this.currentFrame++;
         }else{
             explosions.shift();
@@ -340,6 +352,9 @@ const resetPlayer = _ => {
     if(gameData.rampage){
         player.rage=0;
         gameData.rampage=false;
+        rampageMusic.pause();
+        rampageMusic.currentTime=0;
+        music.play();
     }
     playerSound.play();
     if(player.lives<0){
@@ -363,7 +378,7 @@ const detectCollisions = _ => {
                     enemySound.currentTime=0;
                     enemySound.play();
                     enemiesToRemove.add(j);
-                    if(!gameData.rampage){
+                    if(!gameData.rampage&&!gameData.bossFight){
                         const itemChance = Math.floor(Math.random()*10);
                         if(itemChance==0){
                             items.push(new Item(enemies[j].position.x+enemies[j].width/2,enemies[j].position.y,'rage'));
@@ -455,9 +470,8 @@ const detectCollisions = _ => {
             &&items[i].position.y+items[i].height>=player.position.y
             &&items[i].position.x+items[i].width>=player.position.x
             &&items[i].position.x<=player.position.x+player.width){
-                //play sound
+                powSound.play();
                 itemsToRemove.add(i);
-                // console.log(items[i].type)
                 if(items[i].type=='bullet'){
                     if(gameData.bulletSpeed>150){
                         gameData.bulletSpeed-=10;
@@ -471,6 +485,9 @@ const detectCollisions = _ => {
                             gameData.bulletSpeed=100;
                             gameData.rampage=true;
                             gameData.rampageStart=gameData.time;
+                            music.pause();
+                            music.currentTime=0;
+                            rampageMusic.play();
                         }
                     }
                 }
@@ -489,7 +506,6 @@ const detectCollisions = _ => {
                 explosions.push(new Explosion(trash[i].position.x, trash[i].position.y));
                 trashToRemove.add(i);
                 resetPlayer();
-                //play sound
             }
         }
     }
@@ -552,12 +568,12 @@ const handleKeys = _ => {
         player.velocity.x=0;
     }
     if(keys["space"]){
-        if(gameData["time"]-gameData["lastBullet"]>gameData["bulletSpeed"]){
+        if(gameData.time-gameData.lastBullet>gameData.bulletSpeed){
             bullets.push(new Bullet(player.position.x+11, player.position.y));
             shotSound.currentTime=0;
             shotSound.play();
-            gameData["muzzleFlash"] = true;
-            gameData["lastBullet"]=gameData["time"];
+            gameData.muzzleFlash = true;
+            gameData.lastBullet=gameData.time;
         }
     }
 }
@@ -634,19 +650,23 @@ const draw = _ => {
     for(let i=0; i<explosions.length; i++){
         explosions[i].draw();
     }
-    if(gameData["gameOver"]){
+    if(gameData.gameOver){
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(gameData["message"], canvas.width/2, canvas.height/2);
-    }else if(gameData["nextLevel"]){
+        ctx.fillText(gameData.message, canvas.width/2, canvas.height/2);
+    }else if(gameData.nextLevel){
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText("Level Complete", canvas.width/2, canvas.height/2);
+        ctx.fillText("Level Complete", canvas.width/2, canvas.height/2-25);
+        ctx.fillText("Click here for more", canvas.width/2, canvas.height/2+25);
+        canvas.onclick = _ => {
+            window.location.href = "https://tmdstudios.github.io/";
+        }
     }else{
-        if(gameData["lastMessage"]>gameData["time"]){
+        if(gameData.lastMessage>gameData.time){
             ctx.font = '32px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`Vol ${gameData["soundVolume"]}`, canvas.width/2, canvas.height/2);
+            ctx.fillText(`Vol ${gameData.soundVolume}`, canvas.width/2, canvas.height/2);
         }
     }
     ctx.font = '16px Arial';
@@ -664,52 +684,62 @@ const draw = _ => {
             items.length=0;
             startBossFight();
             gameData.bossFight=true;
+            music.pause();
+            rampageMusic.pause();
+            bossMusic.play();
+            explosions.push(new Explosion(canvas.width/2-160, canvas.height/2-160, true));
+            explosionSound.play();
         }
     }
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
-    gameData["time"] = new Date()-gameData["startTime"];
-    if(gameData["time"]-gameData["lastEnemy"]>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
-        if(gameData["enemySpots"].length>2){
-            const enemyIndex = Math.floor(Math.random()*(gameData["enemySpots"].length-1));
-            enemies.push(new Enemy(gameData["enemySpots"][enemyIndex][0],gameData["enemySpots"][enemyIndex][1]));
-            const temp = gameData["enemySpots"][enemyIndex];
-            gameData["enemySpots"][enemyIndex] = gameData["enemySpots"][gameData["enemySpots"].length-1];
-            gameData["enemySpots"][gameData["enemySpots"].length-1] = temp;
-            gameData["enemySpots"].length-=1;
+    gameData.time = new Date()-gameData.startTime;
+    if(gameData.time-gameData.lastEnemy>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
+        if(gameData.enemySpots.length>2){
+            const enemyIndex = Math.floor(Math.random()*(gameData.enemySpots.length-1));
+            enemies.push(new Enemy(gameData.enemySpots[enemyIndex][0],gameData.enemySpots[enemyIndex][1]));
+            const temp = gameData.enemySpots[enemyIndex];
+            gameData.enemySpots[enemyIndex] = gameData.enemySpots[gameData.enemySpots.length-1];
+            gameData.enemySpots[gameData.enemySpots.length-1] = temp;
+            gameData.enemySpots.length-=1;
         }else{
-            enemies.push(new Enemy(gameData["enemySpots"][0][0],gameData["enemySpots"][0][1]));
-            enemies.push(new Enemy(gameData["enemySpots"][1][0],gameData["enemySpots"][1][1]+10));
-            gameData["enemySpots"]=[[60,-100],[128,-100],[196,-100],[264,-100]];
+            enemies.push(new Enemy(gameData.enemySpots[0][0],gameData.enemySpots[0][1]));
+            enemies.push(new Enemy(gameData.enemySpots[1][0],gameData.enemySpots[1][1]+10));
+            gameData.enemySpots=[[60,-100],[128,-100],[196,-100],[264,-100]];
         }
-        gameData["lastEnemy"]=gameData["time"];
+        gameData.lastEnemy=gameData.time;
     }
     if(gameData.rampage){
-        if(gameData.time-gameData.rampageStart>10000){
+        if(gameData.time-gameData.rampageStart>10000||gameData.bossFight){
             player.rage=0;
             gameData.bulletSpeed=gameData.tempBulletSpeed;
             gameData.rampage=false;
+            rampageMusic.pause();
+            rampageMusic.currentTime=0;
+            if(!gameData.bossFight){
+                music.play();
+            }
         }
     }
     if(gameData.bossFight&&!gameData.levelComplete){
-        if(gameData["time"]-gameData["lastTrash"]>1500){
+        if(gameData.time-gameData.lastTrash>1500){
             for(let i=0; i<4; i++){
                 if(enemies[i].position.y>canvas.height*0.33){
                     trash.push(new Trash(enemies[i].position.x+enemies[i].width/2,enemies[i].position.y+enemies[i].height-33));
                 }
             }
-            gameData["lastTrash"]=gameData["time"];
+            gameData.lastTrash=gameData.time;
         }
     }
 
-    gameData["muzzleFlash"] = false;
+    gameData.muzzleFlash = false;
     handleKeys();
     update();
     draw();
     
-    if(!gameData["gameOver"]){
+    if(!gameData.gameOver){
         requestAnimationFrame(gameLoop);
     }else{
         music.pause();
@@ -734,12 +764,12 @@ document.addEventListener('keydown', e => {
         keys["space"] = true;
     }
     if(e.key === 'q'){
-        gameData["gameOver"] = true;
+        gameData.gameOver = true;
     }
     if(e.key === 'a'){
-        if(gameData["gameOver"]){
-            gameData["gameOver"]=false;
-            // music.play();
+        if(gameData.gameOver){
+            gameData.gameOver=false;
+            music.play();
             gameLoop();
         }
     }
@@ -748,12 +778,12 @@ document.addEventListener('keydown', e => {
         // console.log(items.length)
     }
     if(e.key === 'v'){
-        gameData["soundVolume"]++;
-        if(gameData["soundVolume"]>3){
-            gameData["soundVolume"]=0;
+        gameData.soundVolume++;
+        if(gameData.soundVolume>3){
+            gameData.soundVolume=0;
         }
         for(let i=0; i<sounds.length; i++){
-            switch(gameData["soundVolume"]){
+            switch(gameData.soundVolume){
                 case 0:
                     sounds[i].volume=0;
                     break;
@@ -768,7 +798,7 @@ document.addEventListener('keydown', e => {
                     break;
             }
         }
-        gameData["lastMessage"]=gameData["time"]+500;
+        gameData.lastMessage=gameData.time+500;
     }
 });
 
@@ -790,7 +820,7 @@ document.addEventListener('keyup', e => {
     }
 });
 
-gameData["startTime"] = new Date();
+gameData.startTime = new Date();
 const player = new Player();
 const yellowLineLeft = new YellowLine(36);
 const yellowLineRight = new YellowLine(canvas.width-40)
