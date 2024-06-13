@@ -39,7 +39,8 @@ const powSound = new Audio('media/pow.ogg');
 const sounds = [shotSound, enemySound, playerSound, explosionSound, powSound];
 
 const enemySprites = [
-    [29,56,87,70],[24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],[27,47,170,79],[28,48,116,78],[26,48,197,78]
+    [29,56,87,70],[24,46,82,10],[33,70,54,56],[26,48,223,78],[28,51,54,5],[16,33,227,45],[25,38,106,32],
+    [30,51,146,128],[30,51,176,128],[28,51,206,128],[18,37,235,128],[27,47,170,79],[28,48,116,78],[26,48,197,78]
 ];
 
 const contain = (pos,width,height,isPlayer=false) => {
@@ -291,15 +292,15 @@ class Item {
         this.type=type;
 
         if(type=='bullet'){
-            this.width = 10;
-            this.height = 10;
-            this.imgX = 22;
-            this.imgY = 65;
+            this.width = 20;
+            this.height = 15;
+            this.imgX = 1;
+            this.imgY = 156;
         }else{
-            this.width = 10;
-            this.height = 10;
-            this.imgX = 22;
-            this.imgY = 15;
+            this.width = 25;
+            this.height = 28;
+            this.imgX = 21;
+            this.imgY = 156;
         }
 
         this.image = new Image();
@@ -590,19 +591,19 @@ const convertTime = totalMs => {
     let seconds = Math.floor((totalMs / 1000)) % 60;
     if(seconds<10){
         if(ms<10){
-            return ''+minutes+':0'+seconds+':00'+ms+'';
+            return ''+minutes+':0'+seconds+'';
         }else if(ms<100){
-            return ''+minutes+':0'+seconds+':0'+ms+'';
+            return ''+minutes+':0'+seconds+'';
         }else{
-            return ''+minutes+':0'+seconds+':'+ms+'';
+            return ''+minutes+':0'+seconds+'';
         }
     }else{
         if(ms<10){
-            return ''+minutes+':'+seconds+':00'+ms+'';
+            return ''+minutes+':'+seconds+'';
         }else if(ms<100){
-            return ''+minutes+':'+seconds+':0'+ms+'';
+            return ''+minutes+':'+seconds+'';
         }else{
-            return ''+minutes+':'+seconds+':'+ms+'';
+            return ''+minutes+':'+seconds+'';
         }
     }
 }
@@ -671,13 +672,16 @@ const draw = _ => {
     }
     ctx.font = '16px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Lives: ${player.lives}`, 10, 25);
-    ctx.fillText(`Rage: ${player.rage}`, 10, 50);
-    ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75);
-    if(gameData.time<12000){ // 2 minutes == 120000)
-        ctx.fillText(`Time: ${convertTime(gameData.time)}`, 10, 100);
+    for(let i=0; i<player.lives; i++){
+        ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width, 10, player.width, player.height);
+    }
+    // ctx.drawImage(player.image, 71, 156, 22, 22, canvas.width/2-11, 35, 22, 22);
+    ctx.textAlign = 'center';
+    ctx.fillText(`Level 1`, canvas.width/2, 30);
+    if(gameData.time<120000){ // 2 minutes == 120000)
+        ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
     }else{
-        ctx.fillText(`BOSS`, 10, 100);
+        ctx.fillText(`BOSS`, canvas.width/2, 55);
         if(!gameData.bossFight){
             enemies.length=0;
             bullets.length=0;
@@ -691,6 +695,14 @@ const draw = _ => {
             explosionSound.play();
         }
     }
+    ctx.drawImage(player.image, 1, 128, 132, 28, canvas.width-138, 10, 132, 28);
+    // for(let i=0; i<player.bullets; i++){
+    //     ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 10+i*player.width, 10, player.width, player.height);
+    // }
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: 0000`, 5, 80);
+    // ctx.fillText(`Rage: ${player.rage}`, 10, 50);
+    // ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75);
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
