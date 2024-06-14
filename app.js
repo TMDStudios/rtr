@@ -16,7 +16,11 @@ const gameData = {
     "bossFight": false,
     "lastTrash": 0,
     "levelComplete": false,
-    "nextLevel": false
+    "nextLevel": false,
+    "extraLife": 100,
+    "invincibleTimer": 0,
+    "alpha": 1,
+    "raiseAlpha": false
 }
 
 const canvas = document.querySelector('canvas');
@@ -65,6 +69,7 @@ class Player {
         this.rage = 0;
         this.bullets = 1;
         this.score = 0;
+        this.invincible = false;
 
         this.position = {
             x: 200,
@@ -90,7 +95,20 @@ class Player {
     }
 
     draw(){
-        ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+        if(this.invincible){
+            if(gameData.alpha<=.2){
+                gameData.raiseAlpha=true;
+            }
+            if(gameData.alpha>=1){
+                gameData.raiseAlpha=false;
+            }
+            gameData.raiseAlpha ? gameData.alpha+=.02 : gameData.alpha-=.02;
+            ctx.globalAlpha=gameData.alpha;
+            ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+            ctx.globalAlpha=1;
+        }else{
+            ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
+        }
         if(gameData.muzzleFlash){
             ctx.drawImage(this.image, this.muzzleX, this.muzzleY, this.muzzleW, this.muzzleH, this.position.x+8, this.position.y-8, this.muzzleW, this.muzzleH);
         }
@@ -348,7 +366,10 @@ class Trash {
 }
 
 const resetPlayer = _ => {
-    player.position.x=30; // Handle this later
+    player.position.x=66;
+    player.position.y=canvas.height-150;
+    player.invincible=true;
+    gameData.invincibleTimer=gameData.time;
     player.lives--;
     player.bullets=1;
     gameData.bulletSpeed=250;
@@ -362,7 +383,9 @@ const resetPlayer = _ => {
     }
     playerSound.play();
     if(player.lives<0){
-        gameData.gameOver = true;
+        gameData.alpha=0;
+        gameData.message="Game Over";
+        gameData.gameOver=true;
     }
 }
 
@@ -454,7 +477,9 @@ const detectCollisions = _ => {
                             explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
                             enemiesToRemove.add(i);
                             player.score++;
-                            resetPlayer();
+                            if(!player.invincible){
+                                resetPlayer();
+                            }
                         }
                     }
                 }
@@ -513,7 +538,10 @@ const detectCollisions = _ => {
                 explosions.push(new Explosion(player.position.x, player.position.y));
                 explosions.push(new Explosion(trash[i].position.x, trash[i].position.y));
                 trashToRemove.add(i);
-                resetPlayer();
+                player.score++;
+                if(!player.invincible){
+                    resetPlayer();
+                }
             }
         }
     }
@@ -619,6 +647,11 @@ const update = _ => {
     for(let i=0; i<whiteLines.length; i++){
         whiteLines[i].move();
     }
+    if(player.invincible){
+        if(gameData.time-gameData.invincibleTimer>2000){
+            player.invincible=false;
+        }
+    }
     player.move();
     for(let i=0; i<bullets.length; i++){
         bullets[i].move();
@@ -677,42 +710,43 @@ const draw = _ => {
             ctx.fillText(`Vol ${gameData.soundVolume}`, canvas.width/2, canvas.height/2);
         }
     }
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'left';
-    for(let i=0; i<player.lives; i++){
-        ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width*.8, 10, player.width*.8, player.height*.8);
-    }
-    // ctx.drawImage(player.image, 71, 156, 22, 22, canvas.width/2-11, 35, 22, 22);
-    ctx.textAlign = 'center';
-    ctx.fillText(`Level 1`, canvas.width/2, 30);
-    if(gameData.time<120000){ // 2 minutes == 120000)
-        ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
-    }else{
-        ctx.fillText(`BOSS`, canvas.width/2, 55);
-        if(!gameData.bossFight){
-            enemies.length=0;
-            bullets.length=0;
-            items.length=0;
-            startBossFight();
-            gameData.bossFight=true;
-            music.pause();
-            rampageMusic.pause();
-            bossMusic.play();
-            explosions.push(new Explosion(canvas.width/2-160, canvas.height/2-160, true));
-            explosionSound.play();
+    if(!gameData.gameOver){
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        for(let i=0; i<player.lives; i++){
+            ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width*.8, 10, player.width*.8, player.height*.8);
         }
+        ctx.textAlign = 'center';
+        ctx.fillText(`Level 1`, canvas.width/2, 30);
+        if(gameData.time<120000){ // 2 minutes == 120000)
+            ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
+        }else{
+            ctx.fillText(`BOSS`, canvas.width/2, 55);
+            if(!gameData.bossFight){
+                enemies.length=0;
+                bullets.length=0;
+                items.length=0;
+                startBossFight();
+                gameData.bossFight=true;
+                music.pause();
+                rampageMusic.pause();
+                bossMusic.play();
+                explosions.push(new Explosion(canvas.width/2-160, canvas.height/2-160, true));
+                explosionSound.play();
+            }
+        }
+        if(gameData.rampage){
+            ctx.drawImage(player.image, 241, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
+        }else{
+            ctx.drawImage(player.image, 249, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
+        }
+        ctx.drawImage(player.image, 0, 128, 133, 28, canvas.width-137, 10, 132, 28);
+        for(let i=0; i<player.bullets; i++){
+            ctx.drawImage(player.image, 133, 128, 13, 28, (canvas.width-18)-i*15, 42, 13, 28);
+        }
+        ctx.textAlign = 'left';
+        ctx.fillText(`Score: ${player.score}`, 5, 68);
     }
-    if(gameData.rampage){
-        ctx.drawImage(player.image, 241, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
-    }else{
-        ctx.drawImage(player.image, 249, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
-    }
-    ctx.drawImage(player.image, 0, 128, 133, 28, canvas.width-137, 10, 132, 28);
-    for(let i=0; i<player.bullets; i++){
-        ctx.drawImage(player.image, 133, 128, 13, 28, (canvas.width-18)-i*15, 42, 13, 28);
-    }
-    ctx.textAlign = 'left';
-    ctx.fillText(`Score: ${player.score}`, 5, 68);
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
@@ -757,6 +791,13 @@ const gameLoop = _ => {
     }
 
     gameData.muzzleFlash = false;
+    if(player.score>=gameData.extraLife){
+        gameData.extraLife*=2;
+        player.lives++;
+        if(player.lives>=4){
+            player.lives=4;
+        }
+    }
     handleKeys();
     update();
     draw();
@@ -767,6 +808,10 @@ const gameLoop = _ => {
         music.pause();
     }
 }
+
+document.addEventListener('mousedown', e => {
+    console.log(e)
+});
 
 document.addEventListener('keydown', e => {
     if(e.key === 'ArrowLeft'){
@@ -792,6 +837,7 @@ document.addEventListener('keydown', e => {
         if(gameData.gameOver){
             gameData.gameOver=false;
             music.play();
+            gameData.startTime = new Date();
             gameLoop();
         }
     }
