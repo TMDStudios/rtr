@@ -63,6 +63,8 @@ class Player {
     constructor(){
         this.lives = 2;
         this.rage = 0;
+        this.bullets = 1;
+        this.score = 0;
 
         this.position = {
             x: 200,
@@ -348,6 +350,7 @@ class Trash {
 const resetPlayer = _ => {
     player.position.x=30; // Handle this later
     player.lives--;
+    player.bullets=1;
     gameData.bulletSpeed=250;
     gameData.tempBulletSpeed=gameData.bulletSpeed;
     if(gameData.rampage){
@@ -379,6 +382,7 @@ const detectCollisions = _ => {
                     enemySound.currentTime=0;
                     enemySound.play();
                     enemiesToRemove.add(j);
+                    player.score++;
                     if(!gameData.rampage&&!gameData.bossFight){
                         const itemChance = Math.floor(Math.random()*10);
                         if(itemChance==0){
@@ -449,6 +453,7 @@ const detectCollisions = _ => {
                             explosions.push(new Explosion(player.position.x, player.position.y));
                             explosions.push(new Explosion(enemies[i].position.x, enemies[i].position.y));
                             enemiesToRemove.add(i);
+                            player.score++;
                             resetPlayer();
                         }
                     }
@@ -473,8 +478,10 @@ const detectCollisions = _ => {
             &&items[i].position.x<=player.position.x+player.width){
                 powSound.play();
                 itemsToRemove.add(i);
+                player.score+=5;
                 if(items[i].type=='bullet'){
-                    if(gameData.bulletSpeed>150){
+                    if(player.bullets<9){
+                        player.bullets++;
                         gameData.bulletSpeed-=10;
                         gameData.tempBulletSpeed=gameData.bulletSpeed;
                     }
@@ -673,7 +680,7 @@ const draw = _ => {
     ctx.font = '16px Arial';
     ctx.textAlign = 'left';
     for(let i=0; i<player.lives; i++){
-        ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width, 10, player.width, player.height);
+        ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width*.8, 10, player.width*.8, player.height*.8);
     }
     // ctx.drawImage(player.image, 71, 156, 22, 22, canvas.width/2-11, 35, 22, 22);
     ctx.textAlign = 'center';
@@ -695,14 +702,17 @@ const draw = _ => {
             explosionSound.play();
         }
     }
-    ctx.drawImage(player.image, 1, 128, 132, 28, canvas.width-138, 10, 132, 28);
-    // for(let i=0; i<player.bullets; i++){
-    //     ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 10+i*player.width, 10, player.width, player.height);
-    // }
+    if(gameData.rampage){
+        ctx.drawImage(player.image, 241, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
+    }else{
+        ctx.drawImage(player.image, 249, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
+    }
+    ctx.drawImage(player.image, 0, 128, 133, 28, canvas.width-137, 10, 132, 28);
+    for(let i=0; i<player.bullets; i++){
+        ctx.drawImage(player.image, 133, 128, 13, 28, (canvas.width-18)-i*15, 42, 13, 28);
+    }
     ctx.textAlign = 'left';
-    ctx.fillText(`Score: 0000`, 5, 80);
-    // ctx.fillText(`Rage: ${player.rage}`, 10, 50);
-    // ctx.fillText(`Bullet Speed: ${gameData.bulletSpeed}`, 10, 75);
+    ctx.fillText(`Score: ${player.score}`, 5, 68);
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
