@@ -23,6 +23,7 @@ const gameData = {
     "raiseAlpha": false
 }
 
+let lastFrameTime = performance.now();
 const canvas = document.querySelector('canvas');
 // canvas.width = window.innerWidth;
 canvas.width = 360;
@@ -114,9 +115,9 @@ class Player {
         }
     }
 
-    move(){
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
+    move(dt){
+        this.position.x += this.velocity.x*dt;
+        this.position.y += this.velocity.y*dt;
         contain(this.position,this.width,this.height,true);
     }
 }
@@ -141,8 +142,8 @@ class Bullet {
         ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
     }
 
-    move(){
-        this.position.y -= 4;
+    move(dt){
+        this.position.y -= 400*dt;
         if(this.position.y<0){
             bullets = bullets.filter(bullet=>bullet!==this);
         }
@@ -184,23 +185,23 @@ class Enemy {
         ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
     }
 
-    move(){
+    move(dt){
         if(this.isDumpTruck){
             if(gameData.levelComplete){
                 if(this.position.y+this.height>-5){
-                    this.position.y--;
+                    this.position.y-=200*dt;
                 }else{
                     enemies.length=0;
                     gameData.nextLevel=true;
                 }
             }else{
                 if(this.position.y<canvas.height/2){
-                    this.position.y+=0.5;
+                    this.position.y+=100*dt;
                 }
             }
         }else if(this.isBoss){
             if(this.position.y<canvas.height/2-100){
-                this.position.y+=0.5;
+                this.position.y+=100*dt;
             }
             if(this.position.x<32){
                 this.moveLeft=false;
@@ -208,9 +209,9 @@ class Enemy {
             if(this.position.x>canvas.width-32-this.width){
                 this.moveLeft=true;
             }
-            this.moveLeft ? this.position.x-=0.25 : this.position.x+=0.25;
+            this.moveLeft ? this.position.x-=50*dt : this.position.x+=50*dt;
         }else{
-            this.position.y++;
+            this.position.y+=200*dt;
             contain(this.position,this.width,this.height);
         }
     }
@@ -294,8 +295,8 @@ class WhiteLine {
         ctx.drawImage(this.image, this.imgX, this.imgY, 1, 1, this.position.x, this.position.y, this.width, this.height);
     }
 
-    move(){
-        this.position.y+=4;
+    move(dt){
+        this.position.y+=4; // Needs dt
         if(this.position.y>canvas.height+this.height){
             this.position.y=-this.height;
         }
@@ -331,8 +332,8 @@ class Item {
         ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
     }
 
-    move(){
-        this.position.y++;
+    move(dt){
+        this.position.y+=100*dt;
     }
 }
 
@@ -351,7 +352,7 @@ class Trash {
         this.image = new Image();
         this.image.src = 'media/spritesheet.png';
 
-        const angles = [-0.5,-0.25,0,0.25,0.5];
+        const angles = [-50,-25,0,25,50];
         this.speedX = angles[Math.floor(Math.random()*angles.length)];
     }
 
@@ -359,9 +360,9 @@ class Trash {
         ctx.drawImage(this.image, this.imgX, this.imgY, this.width, this.height, this.position.x, this.position.y, this.width, this.height);
     }
 
-    move(){
-        this.position.y+=0.75;
-        this.position.x+=this.speedX;
+    move(dt){
+        this.position.y+=75*dt;
+        this.position.x+=this.speedX*dt;
     }
 }
 
@@ -590,16 +591,16 @@ const explosions = [];
 
 const handleKeys = _ => {
     if(keys["up"]){
-        player.velocity.y=-2;
+        player.velocity.y=-200;
     }else if(keys["down"]){
-        player.velocity.y=2;
+        player.velocity.y=200;
     }else{
         player.velocity.y=0;
     }
     if(keys["left"]){
-        player.velocity.x=-2;
+        player.velocity.x=-200;
     }else if(keys["right"]){
-        player.velocity.x=2;
+        player.velocity.x=200;
     }else{
         player.velocity.x=0;
     }
@@ -643,27 +644,28 @@ const convertTime = totalMs => {
     }
 }
 
-const update = _ => {
+const update = deltaTime => {
+    const dt = deltaTime/1000;
     for(let i=0; i<whiteLines.length; i++){
-        whiteLines[i].move();
+        whiteLines[i].move(dt);
     }
     if(player.invincible){
         if(gameData.time-gameData.invincibleTimer>2000){
             player.invincible=false;
         }
     }
-    player.move();
+    player.move(dt);
     for(let i=0; i<bullets.length; i++){
-        bullets[i].move();
+        bullets[i].move(dt);
     }
     for(let i=0; i<enemies.length; i++){
-        enemies[i].move();
+        enemies[i].move(dt);
     }
     for(let i=0; i<items.length; i++){
-        items[i].move();
+        items[i].move(dt);
     }
     for(let i=0; i<trash.length; i++){
-        trash[i].move();
+        trash[i].move(dt);
     }
     detectCollisions();
 }
@@ -751,6 +753,9 @@ const draw = _ => {
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
+    const timeStamp = performance.now();
+    const deltaTime = timeStamp-lastFrameTime;
+    lastFrameTime=timeStamp;
     gameData.time = new Date()-gameData.startTime;
     if(gameData.time-gameData.lastEnemy>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
         if(gameData.enemySpots.length>2){
@@ -799,7 +804,7 @@ const gameLoop = _ => {
         }
     }
     handleKeys();
-    update();
+    update(deltaTime);
     draw();
     
     if(!gameData.gameOver){
@@ -844,6 +849,8 @@ document.addEventListener('keydown', e => {
     if(e.key === 'n'){
         // items.push(new Item(200,55,'rage'));
         // console.log(items.length)
+        console.log(player.position.x, player.position.y)
+        console.log(player.velocity.x)
     }
     if(e.key === 'v'){
         gameData.soundVolume++;

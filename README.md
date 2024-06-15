@@ -2,6 +2,8 @@
 
 Road to Rage is an open-source demo of the first game I ever published. The original game was written in Python and then rewritten in Java in order to publish it on Google Play. This demo version is written in JavaScript.
 
+You can play the demo here: [Road to Rage Demo](https://tmdstudios.github.io/rtr/ 'Road to Rage Demo')
+
 The full game is availabe on Google Play: [Road to Rage](https://play.google.com/store/apps/details?id=com.wordpress.tmdstudios 'Road to Rage') - A vertical shmup
 
 The game is also available on [itch.io](https://tmd-studios.itch.io/ 'TMD Studios on itch.io') - PC and Browser versions
