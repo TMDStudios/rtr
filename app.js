@@ -10,7 +10,7 @@ const gameData = {
     "enemySpots": [[60,-100],[128,-100],[196,-100],[264,-100]],
     "gameOver": true,
     "muzzleFlash": false,
-    "message": "Press 'a' to start",
+    "message": "Click/Tap to start",
     "lastMessage": 0,
     "soundVolume": 1,
     "bossFight": false,
@@ -20,10 +20,12 @@ const gameData = {
     "extraLife": 100,
     "invincibleTimer": 0,
     "alpha": 1,
-    "raiseAlpha": false
+    "raiseAlpha": false,
+    "mouseDown": false,
+    "lastFrameTime": 0
 }
 
-let lastFrameTime = performance.now();
+gameData.lastFrameTime = performance.now();
 const canvas = document.querySelector('canvas');
 // canvas.width = window.innerWidth;
 canvas.width = 360;
@@ -77,6 +79,10 @@ class Player {
             y: 600
         }
         this.velocity = {
+            x: 0,
+            y: 0
+        }
+        this.target = {
             x: 0,
             y: 0
         }
@@ -589,32 +595,6 @@ for(let i=0; i<6; i++){
 let bullets = [];
 const explosions = [];
 
-const handleKeys = _ => {
-    if(keys["up"]){
-        player.velocity.y=-200;
-    }else if(keys["down"]){
-        player.velocity.y=200;
-    }else{
-        player.velocity.y=0;
-    }
-    if(keys["left"]){
-        player.velocity.x=-200;
-    }else if(keys["right"]){
-        player.velocity.x=200;
-    }else{
-        player.velocity.x=0;
-    }
-    if(keys["space"]){
-        if(gameData.time-gameData.lastBullet>gameData.bulletSpeed){
-            bullets.push(new Bullet(player.position.x+11, player.position.y));
-            shotSound.currentTime=0;
-            shotSound.play();
-            gameData.muzzleFlash = true;
-            gameData.lastBullet=gameData.time;
-        }
-    }
-}
-
 const startBossFight = _ => {
     enemySprites.push([54,123,0,3]);
     enemies.push(new Enemy(47,-100,true),new Enemy(117,-100,true),new Enemy(186,-100,true),new Enemy(257,-100,true));
@@ -754,8 +734,8 @@ const draw = _ => {
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
 const gameLoop = _ => {
     const timeStamp = performance.now();
-    const deltaTime = timeStamp-lastFrameTime;
-    lastFrameTime=timeStamp;
+    const deltaTime = timeStamp-gameData.lastFrameTime;
+    gameData.lastFrameTime=timeStamp;
     gameData.time = new Date()-gameData.startTime;
     if(gameData.time-gameData.lastEnemy>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
         if(gameData.enemySpots.length>2){
@@ -803,7 +783,36 @@ const gameLoop = _ => {
             player.lives=4;
         }
     }
-    handleKeys();
+
+    if(gameData.mouseDown){
+        if(gameData.time-gameData.lastBullet>gameData.bulletSpeed){
+            bullets.push(new Bullet(player.position.x+11, player.position.y));
+            shotSound.currentTime=0;
+            shotSound.play();
+            gameData.muzzleFlash = true;
+            gameData.lastBullet=gameData.time;
+        }
+        const offsetX = player.target.x - player.position.x;
+        const offsetY = player.target.y - player.position.y;
+        player.velocity.x=offsetX*3;
+        player.velocity.y=offsetY*3;
+        if(player.velocity.x>250){
+            player.velocity.x=250;
+        }
+        if(player.velocity.x<-250){
+            player.velocity.x=-250;
+        }
+        if(player.velocity.y>250){
+            player.velocity.y=250;
+        }
+        if(player.velocity.y<-250){
+            player.velocity.y=-250;
+        }
+    }else{
+        player.velocity.x=0;
+        player.velocity.y=0;
+    }
+
     update(deltaTime);
     draw();
     
@@ -814,8 +823,65 @@ const gameLoop = _ => {
     }
 }
 
-document.addEventListener('mousedown', e => {
-    console.log(e)
+canvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    if(gameData.gameOver){
+        gameData.gameOver=false;
+        music.play();
+        gameData.startTime = new Date();
+        gameLoop();
+    }
+    const rect = canvas.getBoundingClientRect();
+    player.target.x = e.clientX-rect.left;
+    player.target.y = e.clientY-rect.top-25;
+    gameData.mouseDown=true;
+});
+
+canvas.addEventListener('mouseup', e => {
+    e.preventDefault();
+    gameData.mouseDown=false;
+});
+
+canvas.addEventListener('mouseleave', e => {
+    e.preventDefault();
+    // Pause game here?
+});
+
+canvas.addEventListener('mousemove', e => {
+    e.preventDefault();
+    if(gameData.mouseDown){
+        const rect = canvas.getBoundingClientRect();
+        player.target.x = e.clientX-rect.left;
+        player.target.y = e.clientY-rect.top-25;
+    }
+});
+
+canvas.addEventListener('touchdown', e => {
+    e.preventDefault();
+    if(gameData.gameOver){
+        gameData.gameOver=false;
+        music.play();
+        gameData.startTime = new Date();
+        gameLoop();
+    }
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.touches[0].clientX-rect.left;
+    const touchY = e.touches[0].clientY-rect.top-25;
+    gameData.mouseDown=true;
+});
+
+canvas.addEventListener('touchup', e => {
+    e.preventDefault();
+    gameData.mouseDown=false;
+});
+
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.touches[0].clientX-rect.left;
+    const touchY = e.touches[0].clientY-rect.top-25;
+    player.target.x = touchX;
+    player.target.y = touchY;
 });
 
 document.addEventListener('keydown', e => {
@@ -849,8 +915,6 @@ document.addEventListener('keydown', e => {
     if(e.key === 'n'){
         // items.push(new Item(200,55,'rage'));
         // console.log(items.length)
-        console.log(player.position.x, player.position.y)
-        console.log(player.velocity.x)
     }
     if(e.key === 'v'){
         gameData.soundVolume++;
