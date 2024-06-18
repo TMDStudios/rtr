@@ -87,6 +87,10 @@ class Player {
             y: 0
         }
 
+        this.maxSpeed = 250;
+        this.speedLimit = 50;
+        this.offsetMultiplier = 3;
+
         this.width = 26;
         this.height = 49;
 
@@ -149,7 +153,7 @@ class Bullet {
     }
 
     move(dt){
-        this.position.y -= 400*dt;
+        this.position.y -= 450*dt;
         if(this.position.y<0){
             bullets = bullets.filter(bullet=>bullet!==this);
         }
@@ -794,19 +798,19 @@ const gameLoop = _ => {
         }
         const offsetX = player.target.x - player.position.x;
         const offsetY = player.target.y - player.position.y;
-        player.velocity.x=offsetX*3;
-        player.velocity.y=offsetY*3;
-        if(player.velocity.x>250){
-            player.velocity.x=250;
+        player.velocity.x=offsetX*player.offsetMultiplier;
+        player.velocity.y=offsetY*player.offsetMultiplier;
+        if(player.velocity.x>player.maxSpeed){
+            player.velocity.x=player.maxSpeed;
         }
-        if(player.velocity.x<-250){
-            player.velocity.x=-250;
+        if(player.velocity.x<-player.maxSpeed){
+            player.velocity.x=-player.maxSpeed;
         }
-        if(player.velocity.y>250){
-            player.velocity.y=250;
+        if(player.velocity.y>player.maxSpeed){
+            player.velocity.y=player.maxSpeed;
         }
-        if(player.velocity.y<-250){
-            player.velocity.y=-250;
+        if(player.velocity.y<-(player.maxSpeed-player.speedLimit)){
+            player.velocity.y=-(player.maxSpeed-player.speedLimit);
         }
     }else{
         player.velocity.x=0;
@@ -825,6 +829,9 @@ const gameLoop = _ => {
 
 canvas.addEventListener('mousedown', e => {
     e.preventDefault();
+    player.maxSpeed=250;
+    player.speedLimit=50;
+    player.offsetMultiplier=3;
     if(gameData.gameOver){
         gameData.gameOver=false;
         music.play();
@@ -856,8 +863,11 @@ canvas.addEventListener('mousemove', e => {
     }
 });
 
-canvas.addEventListener('touchdown', e => {
+canvas.addEventListener('touchstart', e => {
     e.preventDefault();
+    player.maxSpeed=500;
+    player.speedLimit=200;
+    player.offsetMultiplier=6;
     if(gameData.gameOver){
         gameData.gameOver=false;
         music.play();
@@ -866,22 +876,26 @@ canvas.addEventListener('touchdown', e => {
     }
     const rect = canvas.getBoundingClientRect();
     const touchX = e.touches[0].clientX-rect.left;
-    const touchY = e.touches[0].clientY-rect.top-25;
+    const touchY = e.touches[0].clientY-rect.top-50;
+    player.target.x = touchX;
+    player.target.y = touchY;
     gameData.mouseDown=true;
 });
 
-canvas.addEventListener('touchup', e => {
+canvas.addEventListener('touchend', e => {
     e.preventDefault();
     gameData.mouseDown=false;
 });
 
 canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const touchX = e.touches[0].clientX-rect.left;
-    const touchY = e.touches[0].clientY-rect.top-25;
-    player.target.x = touchX;
-    player.target.y = touchY;
+    if(gameData.mouseDown){
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.touches[0].clientX-rect.left;
+        const touchY = e.touches[0].clientY-rect.top-50;
+        player.target.x = touchX;
+        player.target.y = touchY;
+    }
 });
 
 document.addEventListener('keydown', e => {
