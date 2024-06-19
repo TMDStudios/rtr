@@ -15,4 +15,8 @@ canvas {
     margin: auto;
     max-width: 100vw;
     max-height: 100vh;
+    display: none;
+}
+#button {
+    margin: auto;
 }

@@ -9,10 +9,9 @@ const gameData = {
     "lastEnemy": 0,
     "enemySpots": [[60,-100],[128,-100],[196,-100],[264,-100]],
     "gameOver": true,
+    "gamePaused": false,
     "muzzleFlash": false,
     "message": "Click/Tap to start",
-    "lastMessage": 0,
-    "soundVolume": 1,
     "bossFight": false,
     "lastTrash": 0,
     "levelComplete": false,
@@ -27,14 +26,12 @@ const gameData = {
 
 gameData.lastFrameTime = performance.now();
 const canvas = document.querySelector('canvas');
-// canvas.width = window.innerWidth;
 canvas.width = 360;
 canvas.height = 740;
 let ctx = canvas.getContext('2d');
 ctx.font = '32px Arial';
 ctx.fillStyle = 'white';
 const scale = 1;
-// ctx.scale(scaleFactor, scaleFactor);
 const music = new Audio('media/level1.ogg');
 const bossMusic = new Audio('media/boss_fight.ogg');
 const rampageMusic = new Audio('media/rampage.ogg');
@@ -573,14 +570,6 @@ const detectCollisions = _ => {
     }
 }
 
-const keys = {
-    "up": false,
-    "down": false,
-    "left": false,
-    "right": false,
-    "space": false
-}
-
 let enemies = [];
 let items = [];
 let trash = [];
@@ -686,17 +675,16 @@ const draw = _ => {
         ctx.textAlign = 'center';
         ctx.fillText("Level Complete", canvas.width/2, canvas.height/2-25);
         ctx.fillText("Click here for more", canvas.width/2, canvas.height/2+25);
-        canvas.onclick = _ => {
+        canvas.onclick = e => {
+            e.preventDefault();
             window.location.href = "https://tmdstudios.github.io/";
         }
-    }else{
-        if(gameData.lastMessage>gameData.time){
-            ctx.font = '32px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Vol ${gameData.soundVolume}`, canvas.width/2, canvas.height/2);
+        canvas.ontouchstart = e => {
+            e.preventDefault();
+            window.location.href = "https://tmdstudios.github.io/";
         }
     }
-    if(!gameData.gameOver){
+    if(!gameData.gameOver&&!gameData.gamePaused){
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
         for(let i=0; i<player.lives; i++){
@@ -704,7 +692,7 @@ const draw = _ => {
         }
         ctx.textAlign = 'center';
         ctx.fillText(`Level 1`, canvas.width/2, 30);
-        if(gameData.time<120000){ // 2 minutes == 120000)
+        if(gameData.time<60000){ // 1 minute == 60000)
             ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
         }else{
             ctx.fillText(`BOSS`, canvas.width/2, 55);
@@ -733,6 +721,11 @@ const draw = _ => {
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${player.score}`, 5, 68);
     }
+    if(gameData.gamePaused){
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText("Game Paused", canvas.width/2, canvas.height/2-25);
+    }
 }
 
 // Use second (standbyEnemies) array to recycle enemies instead of deleting them
@@ -740,8 +733,10 @@ const gameLoop = _ => {
     const timeStamp = performance.now();
     const deltaTime = timeStamp-gameData.lastFrameTime;
     gameData.lastFrameTime=timeStamp;
-    gameData.time = new Date()-gameData.startTime;
-    if(gameData.time-gameData.lastEnemy>750&&enemies.length<16&&!gameData.bossFight){ // Change based on difficulty
+    if(!gameData.gamePaused){
+        gameData.time = new Date()-gameData.startTime;
+    }
+    if(gameData.time-gameData.lastEnemy>750&&enemies.length<16&&!gameData.bossFight&&!gameData.gameOver){
         if(gameData.enemySpots.length>2){
             const enemyIndex = Math.floor(Math.random()*(gameData.enemySpots.length-1));
             enemies.push(new Enemy(gameData.enemySpots[enemyIndex][0],gameData.enemySpots[enemyIndex][1]));
@@ -817,7 +812,9 @@ const gameLoop = _ => {
         player.velocity.y=0;
     }
 
-    update(deltaTime);
+    if(!gameData.gamePaused){
+        update(deltaTime);
+    }
     draw();
     
     if(!gameData.gameOver){
@@ -829,6 +826,8 @@ const gameLoop = _ => {
 
 canvas.addEventListener('mousedown', e => {
     e.preventDefault();
+    gameData.gamePaused=false;
+    gameData.startTime = new Date() - gameData.time;
     player.maxSpeed=250;
     player.speedLimit=50;
     player.offsetMultiplier=3;
@@ -847,11 +846,12 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('mouseup', e => {
     e.preventDefault();
     gameData.mouseDown=false;
+    gameData.gamePaused=true;
 });
 
 canvas.addEventListener('mouseleave', e => {
     e.preventDefault();
-    // Pause game here?
+    gameData.gamePaused=true;
 });
 
 canvas.addEventListener('mousemove', e => {
@@ -865,6 +865,8 @@ canvas.addEventListener('mousemove', e => {
 
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
+    gameData.gamePaused=false;
+    gameData.startTime = new Date() - gameData.time;
     player.maxSpeed=500;
     player.speedLimit=200;
     player.offsetMultiplier=6;
@@ -884,6 +886,7 @@ canvas.addEventListener('touchstart', e => {
 
 canvas.addEventListener('touchend', e => {
     e.preventDefault();
+    gameData.gamePaused=true;
     gameData.mouseDown=false;
 });
 
@@ -898,84 +901,26 @@ canvas.addEventListener('touchmove', e => {
     }
 });
 
-document.addEventListener('keydown', e => {
-    if(e.key === 'ArrowLeft'){
-        keys["left"] = true;
-    }
-    if(e.key === 'ArrowRight'){
-        keys["right"] = true;
-    }
-    if(e.key === 'ArrowUp'){
-        keys["up"] = true;
-    }
-    if(e.key === 'ArrowDown'){
-        keys["down"] = true;
-        // console.log(items.length)
-    }
-    if(e.key === ' '){
-        keys["space"] = true;
-    }
-    if(e.key === 'q'){
-        gameData.gameOver = true;
-    }
-    if(e.key === 'a'){
-        if(gameData.gameOver){
-            gameData.gameOver=false;
-            music.play();
-            gameData.startTime = new Date();
-            gameLoop();
-        }
-    }
-    if(e.key === 'n'){
-        // items.push(new Item(200,55,'rage'));
-        // console.log(items.length)
-    }
-    if(e.key === 'v'){
-        gameData.soundVolume++;
-        if(gameData.soundVolume>3){
-            gameData.soundVolume=0;
-        }
-        for(let i=0; i<sounds.length; i++){
-            switch(gameData.soundVolume){
-                case 0:
-                    sounds[i].volume=0;
-                    break;
-                case 1:
-                    sounds[i].volume=0.33;
-                    break;
-                case 2:
-                    sounds[i].volume=0.66;
-                    break;
-                default:
-                    sounds[i].volume=1;
-                    break;
-            }
-        }
-        gameData.lastMessage=gameData.time+500;
-    }
-});
-
-document.addEventListener('keyup', e => {
-    if(e.key === 'ArrowLeft'){
-        keys["left"] = false;
-    }
-    if(e.key === 'ArrowRight'){
-        keys["right"] = false;
-    }
-    if(e.key === 'ArrowUp'){
-        keys["up"] = false;
-    }
-    if(e.key === 'ArrowDown'){
-        keys["down"] = false;
-    }
-    if(e.key === ' '){
-        keys["space"] = false;
-    }
-});
+// window.addEventListener('orientationchange', _ => {
+//     gameData.isPortrait = window.matchMedia('(orientation: portrait)').matches;
+//     if(!gameData.isPortrait){
+//         gameData.gamePaused=true;
+//     }
+// });
 
 gameData.startTime = new Date();
 const player = new Player();
 const yellowLineLeft = new YellowLine(36);
-const yellowLineRight = new YellowLine(canvas.width-40)
+const yellowLineRight = new YellowLine(canvas.width-40);
 
-gameLoop();
+// gameLoop();
+
+ctx.font = '32px Arial';
+ctx.textAlign = 'center';
+ctx.fillText(gameData.message, canvas.width/2, canvas.height/2);
+
+const startGame = _ => {
+    document.getElementById('button').style.display='none';
+    document.getElementById('canvas').style.display='block';
+    gameLoop();
+}
