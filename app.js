@@ -36,6 +36,7 @@ const music = new Audio('media/level1.ogg');
 const bossMusic = new Audio('media/boss_fight.ogg');
 const rampageMusic = new Audio('media/rampage.ogg');
 const shotSound = new Audio('media/shot.ogg');
+shotSound.volume=0.25;
 const enemySound = new Audio('media/enemy.ogg');
 const playerSound = new Audio('media/player.ogg');
 const explosionSound = new Audio('media/explosion.ogg');
@@ -169,6 +170,8 @@ class Enemy {
             y: 0
         }
 
+        this.speedX = 0;
+
         let spriteIndex = isDumpTruck ? enemySprites.length-1 : Math.floor(Math.random()*(enemySprites.length-1));
 
         this.isDumpTruck = isDumpTruck;
@@ -218,6 +221,7 @@ class Enemy {
             }
             this.moveLeft ? this.position.x-=50*dt : this.position.x+=50*dt;
         }else{
+            this.position.x+=this.speedX*dt;
             this.position.y+=200*dt;
             contain(this.position,this.width,this.height);
         }
@@ -470,13 +474,9 @@ const detectCollisions = _ => {
                     if(enemies[i].distance.y<player.height){
                         enemies[i].distance.x = enemies[i].position.x-player.position.x;
                         if(enemies[i].distance.x>0){
-                            if(enemies[i].distance.y%10==0){
-                                enemies[i].position.x-=1;
-                            }
+                            enemies[i].speedX=-50;
                         }else{
-                            if(enemies[i].distance.y%10==0){
-                                enemies[i].position.x+=1;
-                            }
+                            enemies[i].speedX=50;
                         }
                         if(enemies[i].position.y+enemies[i].height>=player.position.y
                         &&enemies[i].position.x+enemies[i].width>=player.position.x
@@ -489,6 +489,8 @@ const detectCollisions = _ => {
                                 resetPlayer();
                             }
                         }
+                    }else{
+                        enemies[i].speedX=0;
                     }
                 }
             }else{
@@ -651,14 +653,14 @@ const draw = _ => {
         whiteLines[i].draw();
     }
     player.draw();
+    for(let i=0; i<items.length; i++){
+        items[i].draw();
+    }
     for(let i=0; i<bullets.length; i++){
         bullets[i].draw();
     }
     for(let i=0; i<enemies.length; i++){
         enemies[i].draw();
-    }
-    for(let i=0; i<items.length; i++){
-        items[i].draw();
     }
     for(let i=0; i<trash.length; i++){
         trash[i].draw();
@@ -849,11 +851,6 @@ canvas.addEventListener('mouseup', e => {
     gameData.gamePaused=true;
 });
 
-canvas.addEventListener('mouseleave', e => {
-    e.preventDefault();
-    gameData.gamePaused=true;
-});
-
 canvas.addEventListener('mousemove', e => {
     e.preventDefault();
     if(gameData.mouseDown){
@@ -901,19 +898,10 @@ canvas.addEventListener('touchmove', e => {
     }
 });
 
-// window.addEventListener('orientationchange', _ => {
-//     gameData.isPortrait = window.matchMedia('(orientation: portrait)').matches;
-//     if(!gameData.isPortrait){
-//         gameData.gamePaused=true;
-//     }
-// });
-
 gameData.startTime = new Date();
 const player = new Player();
 const yellowLineLeft = new YellowLine(36);
 const yellowLineRight = new YellowLine(canvas.width-40);
-
-// gameLoop();
 
 ctx.font = '32px Arial';
 ctx.textAlign = 'center';

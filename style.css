@@ -17,6 +17,15 @@ canvas {
     max-height: 100vh;
     display: none;
 }
+@media only screen and (max-width: 768px){
+    body {
+        align-items: flex-start;
+    }
+    canvas {
+        max-height: 90vh;
+        margin: 0;
+    }
+}
 #button {
     margin: auto;
 }
