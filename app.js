@@ -64,6 +64,14 @@ const contain = (pos,width,height,isPlayer=false) => {
     return pos;
 }
 
+const bgFill = _ => {
+    ctx.fillStyle = 'rgb(33,33,33)';
+    ctx.fillRect(0,canvas.height/2-100,canvas.width,200);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = 'whitesmoke';
+}
+
 class Player {
     constructor(){
         this.lives = 2;
@@ -395,6 +403,7 @@ const resetPlayer = _ => {
     }
     playerSound.play();
     if(player.lives<0){
+        explosions=[];
         gameData.alpha=0;
         gameData.message="Game Over";
         gameData.gameOver=true;
@@ -588,7 +597,7 @@ for(let i=0; i<6; i++){
 }
 
 let bullets = [];
-const explosions = [];
+let explosions = [];
 
 const startBossFight = _ => {
     enemySprites.push([54,123,0,3]);
@@ -669,24 +678,37 @@ const draw = _ => {
         explosions[i].draw();
     }
     if(gameData.gameOver){
+        bgFill();
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(gameData.message, canvas.width/2, canvas.height/2);
+        ctx.fillText(gameData.message, canvas.width/2, canvas.height/2-25);
+        if(player.lives<=0){
+            ctx.fillText("Click here to try again", canvas.width/2, canvas.height/2+25);
+            document.onmousedown = e => {
+                e.preventDefault();
+                location.reload();
+            }
+            document.ontouchstart = e => {
+                e.preventDefault();
+                location.reload();
+            }
+        }
     }else if(gameData.nextLevel){
+        bgFill();
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
         ctx.fillText("Level Complete", canvas.width/2, canvas.height/2-25);
         ctx.fillText("Click here for more", canvas.width/2, canvas.height/2+25);
-        canvas.onclick = e => {
+        document.onmousedown = e => {
             e.preventDefault();
             window.location.href = "https://tmdstudios.github.io/";
         }
-        canvas.ontouchstart = e => {
+        document.ontouchstart = e => {
             e.preventDefault();
             window.location.href = "https://tmdstudios.github.io/";
         }
     }
-    if(!gameData.gameOver&&!gameData.gamePaused){
+    if(!gameData.gameOver&&!gameData.gamePaused&&!gameData.levelComplete){
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
         for(let i=0; i<player.lives; i++){
@@ -694,7 +716,7 @@ const draw = _ => {
         }
         ctx.textAlign = 'center';
         ctx.fillText(`Level 1`, canvas.width/2, 30);
-        if(gameData.time<60000){ // 1 minute == 60000)
+        if(gameData.time<10000){ // 1 minute == 60000)
             ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
         }else{
             ctx.fillText(`BOSS`, canvas.width/2, 55);
@@ -723,7 +745,8 @@ const draw = _ => {
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${player.score}`, 5, 68);
     }
-    if(gameData.gamePaused){
+    if(gameData.gamePaused&&!gameData.levelComplete){
+        bgFill();
         ctx.font = '32px Arial';
         ctx.textAlign = 'center';
         ctx.fillText("Game Paused", canvas.width/2, canvas.height/2-25);
