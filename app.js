@@ -605,29 +605,6 @@ const startBossFight = _ => {
     enemies.push(new Enemy(60,-160,false,true),new Enemy(120,-160,false,true),new Enemy(180,-160,false,true));
 }
 
-const convertTime = totalMs => {
-    let ms = totalMs % 1000;
-    let minutes = Math.floor((totalMs / 60000)) % 60;
-    let seconds = Math.floor((totalMs / 1000)) % 60;
-    if(seconds<10){
-        if(ms<10){
-            return ''+minutes+':0'+seconds+'';
-        }else if(ms<100){
-            return ''+minutes+':0'+seconds+'';
-        }else{
-            return ''+minutes+':0'+seconds+'';
-        }
-    }else{
-        if(ms<10){
-            return ''+minutes+':'+seconds+'';
-        }else if(ms<100){
-            return ''+minutes+':'+seconds+'';
-        }else{
-            return ''+minutes+':'+seconds+'';
-        }
-    }
-}
-
 const update = deltaTime => {
     const dt = deltaTime/1000;
     for(let i=0; i<whiteLines.length; i++){
@@ -716,8 +693,9 @@ const draw = _ => {
         }
         ctx.textAlign = 'center';
         ctx.fillText(`Level 1`, canvas.width/2, 30);
-        if(gameData.time<10000){ // 1 minute == 60000)
-            ctx.fillText(`Time: ${convertTime(gameData.time)}`, canvas.width/2, 55);
+        if(gameData.time<60000){ // 1 minute == 60000)
+            let seconds = 60-(Math.floor((gameData.time / 1000)) % 60);
+            seconds<60 ? ctx.fillText(`Time: 0:${seconds}`, canvas.width/2, 55) : ctx.fillText(`Time: 1:00`, canvas.width/2, 55);
         }else{
             ctx.fillText(`BOSS`, canvas.width/2, 55);
             if(!gameData.bossFight){
