@@ -132,8 +132,13 @@ class Player {
     }
 
     move(dt){
-        this.position.x += this.velocity.x*dt;
-        this.position.y += this.velocity.y*dt;
+        if(this.invincible){
+            this.position.x += this.velocity.x*dt*.5;
+            this.position.y += this.velocity.y*dt*.5;
+        }else{
+            this.position.x += this.velocity.x*dt;
+            this.position.y += this.velocity.y*dt;
+        }
         contain(this.position,this.width,this.height,true);
     }
 }
@@ -213,12 +218,12 @@ class Enemy {
                     gameData.nextLevel=true;
                 }
             }else{
-                if(this.position.y<canvas.height/2){
+                if(this.position.y<canvas.height/2-50){
                     this.position.y+=100*dt;
                 }
             }
         }else if(this.isBoss){
-            if(this.position.y<canvas.height/2-100){
+            if(this.position.y<canvas.height/2-160){
                 this.position.y+=100*dt;
             }
             if(this.position.x<32){
@@ -371,7 +376,7 @@ class Trash {
         this.image = new Image();
         this.image.src = 'media/spritesheet.png';
 
-        const angles = [-50,-25,0,25,50];
+        const angles = [-33,-25,0,25,33];
         this.speedX = angles[Math.floor(Math.random()*angles.length)];
     }
 
@@ -380,7 +385,7 @@ class Trash {
     }
 
     move(dt){
-        this.position.y+=75*dt;
+        this.position.y+=100*dt;
         this.position.x+=this.speedX*dt;
     }
 }
@@ -695,7 +700,11 @@ const draw = _ => {
         ctx.fillText(`Level 1`, canvas.width/2, 30);
         if(gameData.time<60000){ // 1 minute == 60000)
             let seconds = 60-(Math.floor((gameData.time / 1000)) % 60);
-            seconds<60 ? ctx.fillText(`Time: 0:${seconds}`, canvas.width/2, 55) : ctx.fillText(`Time: 1:00`, canvas.width/2, 55);
+            if(seconds<60){
+                seconds<10 ? ctx.fillText(`Time: 0:0${seconds}`, canvas.width/2, 55) : ctx.fillText(`Time: 0:${seconds}`, canvas.width/2, 55);
+            }else{
+                ctx.fillText(`Time: 1:00`, canvas.width/2, 55);
+            }
         }else{
             ctx.fillText(`BOSS`, canvas.width/2, 55);
             if(!gameData.bossFight){
