@@ -1,3 +1,7 @@
+@font-face {
+    font-family: 'SpaceJunkXL';
+    src: url('media/spacejunkXL.ttf') format('truetype');
+}
 body {
     margin: 0;
     padding: 0;
@@ -17,6 +21,31 @@ canvas {
     max-height: 100vh;
     display: none;
 }
+#welcomeScreen {
+    font-family: 'SpaceJunkXL', Arial, Helvetica, sans-serif;
+    margin: auto;
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items:center;
+    background-color: rgba(0,0,0,0.2);
+}
+#welcomeScreen p {
+    margin: 40px;
+    font-size: 3rem;
+}
+.gasStation {
+    width: 360px;
+}
+#logo {
+    margin-bottom: 64px;
+    border-bottom: 1px solid rgba(0,0,0,0);
+}
+#logo:hover {
+    border-bottom: 1px solid whitesmoke;
+    background-color: rgba(0,0,0,0.1);
+}
 @media only screen and (max-width: 768px){
     body {
         align-items: flex-start;
@@ -25,7 +54,18 @@ canvas {
         max-height: 90vh;
         margin: 0;
     }
+    #welcomeScreen {
+        height: 100%;
+    }
 }
 #button {
+    font-family: 'SpaceJunkXL', Arial, Helvetica, sans-serif;
     margin: auto;
+    padding-top: 16px;
+    height: 64px;
+    width: 200px;
+    font-size: 2rem;
+    background-color: darkblue;
+    color: whitesmoke;
+    border-radius: 4px;
 }

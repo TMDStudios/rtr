@@ -11,7 +11,7 @@ const gameData = {
     "gameOver": true,
     "gamePaused": false,
     "muzzleFlash": false,
-    "message": "Click/Tap to start",
+    "message": "Click/Tap to play",
     "bossFight": false,
     "lastTrash": 0,
     "levelComplete": false,
@@ -29,7 +29,7 @@ const canvas = document.querySelector('canvas');
 canvas.width = 360;
 canvas.height = 740;
 let ctx = canvas.getContext('2d');
-ctx.font = '32px Arial';
+ctx.font = '40px SpaceJunkXL, Arial, Helvetica, sans-serif';
 ctx.fillStyle = 'white';
 const scale = 1;
 const music = new Audio('media/level1.ogg');
@@ -661,7 +661,7 @@ const draw = _ => {
     }
     if(gameData.gameOver){
         bgFill();
-        ctx.font = '32px Arial';
+        ctx.font = '40px SpaceJunkXL, Arial, Helvetica, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(gameData.message, canvas.width/2, canvas.height/2-25);
         if(player.lives<=0){
@@ -677,7 +677,7 @@ const draw = _ => {
         }
     }else if(gameData.nextLevel){
         bgFill();
-        ctx.font = '32px Arial';
+        ctx.font = '40px SpaceJunkXL, Arial, Helvetica, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText("Level Complete", canvas.width/2, canvas.height/2-25);
         ctx.fillText("Click here for more", canvas.width/2, canvas.height/2+25);
@@ -691,7 +691,7 @@ const draw = _ => {
         }
     }
     if(!gameData.gameOver&&!gameData.gamePaused&&!gameData.levelComplete){
-        ctx.font = '16px Arial';
+        ctx.font = '20px SpaceJunkXL, Arial, Helvetica, sans-serif';
         ctx.textAlign = 'left';
         for(let i=0; i<player.lives; i++){
             ctx.drawImage(player.image, player.imgX, player.imgY, player.width, player.height, 5+i*player.width*.8, 10, player.width*.8, player.height*.8);
@@ -734,7 +734,7 @@ const draw = _ => {
     }
     if(gameData.gamePaused&&!gameData.levelComplete){
         bgFill();
-        ctx.font = '32px Arial';
+        ctx.font = '40px SpaceJunkXL, Arial, Helvetica, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText("Game Paused", canvas.width/2, canvas.height/2-25);
     }
@@ -913,12 +913,12 @@ const player = new Player();
 const yellowLineLeft = new YellowLine(36);
 const yellowLineRight = new YellowLine(canvas.width-40);
 
-ctx.font = '32px Arial';
+ctx.font = '40px SpaceJunkXL, Arial, Helvetica, sans-serif';
 ctx.textAlign = 'center';
 ctx.fillText(gameData.message, canvas.width/2, canvas.height/2);
 
 const startGame = _ => {
-    document.getElementById('button').style.display='none';
+    document.getElementById('welcomeScreen').style.display='none';
     document.getElementById('canvas').style.display='block';
     gameLoop();
 }
