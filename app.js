@@ -41,6 +41,7 @@ const enemySound = new Audio('media/enemy.ogg');
 const playerSound = new Audio('media/player.ogg');
 const explosionSound = new Audio('media/explosion.ogg');
 const powSound = new Audio('media/pow.ogg');
+const exhaustSound = new Audio('media/exhaust.ogg');
 const sounds = [shotSound, enemySound, playerSound, explosionSound, powSound];
 
 const enemySprites = [
@@ -704,6 +705,7 @@ const draw = _ => {
                 seconds<10 ? ctx.fillText(`Time: 0:0${seconds}`, canvas.width/2, 55) : ctx.fillText(`Time: 0:${seconds}`, canvas.width/2, 55);
             }else{
                 ctx.fillText(`Time: 1:00`, canvas.width/2, 55);
+                exhaustSound.pause();
             }
         }else{
             ctx.fillText(`BOSS`, canvas.width/2, 55);
@@ -918,6 +920,8 @@ ctx.textAlign = 'center';
 ctx.fillText(gameData.message, canvas.width/2, canvas.height/2);
 
 const startGame = _ => {
+    exhaustSound.volume=0.33;
+    exhaustSound.play();
     document.getElementById('welcomeScreen').style.display='none';
     document.getElementById('canvas').style.display='block';
     gameLoop();
