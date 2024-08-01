@@ -702,13 +702,15 @@ const draw = _ => {
         if(gameData.time<60000){ // 1 minute == 60000)
             let seconds = 60-(Math.floor((gameData.time / 1000)) % 60);
             if(seconds<60){
-                seconds<10 ? ctx.fillText(`Time: 0:0${seconds}`, canvas.width/2, 55) : ctx.fillText(`Time: 0:${seconds}`, canvas.width/2, 55);
+                seconds<10 ? ctx.fillText(`0:0${seconds}`, canvas.width/2, 55) : ctx.fillText(`0:${seconds}`, canvas.width/2, 55);
             }else{
-                ctx.fillText(`Time: 1:00`, canvas.width/2, 55);
+                ctx.fillText(`1:00`, canvas.width/2, 55);
                 exhaustSound.pause();
             }
         }else{
+            ctx.fillStyle = 'red';
             ctx.fillText(`BOSS`, canvas.width/2, 55);
+            ctx.fillStyle = 'white';
             if(!gameData.bossFight){
                 enemies.length=0;
                 bullets.length=0;
@@ -723,7 +725,7 @@ const draw = _ => {
             }
         }
         if(gameData.rampage){
-            ctx.drawImage(player.image, 241, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
+            ctx.drawImage(player.image, 241, 178, 6, 6, canvas.width-136, 12, 130, 24);
         }else{
             ctx.drawImage(player.image, 249, 178, 6, 6, canvas.width-136, 12, 13*player.rage, 24);
         }
